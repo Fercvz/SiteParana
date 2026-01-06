@@ -31,3 +31,5 @@ pip-delete-this-directory.txt
 # Editor settings
 .vscode/
 .idea/
+
+temp_tse/
