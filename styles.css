@@ -77,7 +77,8 @@ body {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border-color);
-    z-index: 500;
+    z-index: 1500;
+    /* Ensure it's above almost everything */
     position: relative;
 }
 
@@ -102,45 +103,148 @@ body {
     display: flex;
     gap: 1rem;
     align-items: center;
+    margin-left: auto;
+    /* Push to right */
 }
 
-/* Glassy Search Input */
+/* Glassy Search Input - Adjustments */
 .search-container {
     background: var(--bg-color);
     padding: 0.4rem 1rem;
     border-radius: 9999px;
-    /* Pill shape */
     display: flex;
     align-items: center;
     border: 1px solid var(--border-color);
     transition: all 0.2s ease;
+    margin-right: 0.5rem;
 }
 
-.search-container:focus-within {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-input#city-search {
+/* Login Button - Header Integration */
+#login-btn {
+    position: relative;
+    /* Ensure z-index works */
+    z-index: 2000;
+    /* Force top layer */
+    padding: 0.5rem 1.2rem;
+    background: linear-gradient(135deg, var(--accent-color), #7c3aed);
+    color: white;
     border: none;
-    outline: none;
-    background: transparent;
-    color: var(--text-primary);
-    width: 200px;
-    font-size: 0.9rem;
-}
-
-button#search-btn {
-    background: none;
-    border: none;
+    border-radius: 9999px;
     cursor: pointer;
-    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    transition: all 0.2s;
     display: flex;
     align-items: center;
+    gap: 6px;
 }
 
-button#search-btn:hover {
-    color: var(--accent-color);
+#login-btn::before {
+    content: "🔒";
+    font-size: 0.8rem;
+}
+
+#login-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+/* --- Modern Login Modal --- */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    /* Dimmed background */
+    z-index: 2500;
+    /* Highest z-index to overlay everything including header */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 2.5rem;
+    border-radius: 24px;
+    width: 380px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+[data-theme="dark"] .modal-content {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.modal-content h2 {
+    margin: 0 0 0.5rem 0;
+    text-align: center;
+    background: linear-gradient(to right, var(--accent-color), #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.8rem;
+}
+
+.input-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+    display: block;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.modal-content input:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.btn-primary.full-width {
+    padding: 0.8rem;
+    font-size: 1rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent-color), #7c3aed);
+    margin-top: 0.5rem;
+}
+
+#close-login {
+    top: 20px;
+    right: 20px;
+    background: var(--bg-color);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    transition: background 0.2s;
+}
+
+#close-login:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
 }
 
 #theme-toggle {
@@ -640,15 +744,26 @@ path.municipio.highlight-filter:not(.active) {
     flex: 1;
     background: none;
     border: none;
-    padding: 0.8rem 0.5rem;
-    font-size: 0.85rem;
+    padding: 0.8rem 0.2rem;
+    /* Reduced padding */
+    font-size: 0.8rem;
+    /* Slightly smaller base size */
     font-weight: 600;
     color: var(--text-secondary);
+    white-space: normal;
+    /* Allow wrapping */
+    text-align: center;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
 }
+
+
 
 .tab-btn:hover {
     color: var(--text-primary);
@@ -964,4 +1079,373 @@ path.municipio.highlight-filter:not(.active) {
 .message a {
     color: #2563eb;
     text-decoration: underline;
+}
+
+/* --- Login & Campaign Styles --- */
+.hidden {
+    display: none !important;
+}
+
+/* Old Login Button CSS Removed */
+
+/* Global Stats Bar */
+.campaign-stats {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card-bg);
+    padding: 0.5rem 1.5rem;
+    border-radius: 50px;
+    display: flex;
+    gap: 2rem;
+    z-index: 550;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--accent-color);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    font-weight: 700;
+    color: var(--accent-color);
+    font-size: 1.1rem;
+}
+
+/* Campaign Form (Sidebar) */
+.campaign-form {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px dashed var(--border-color);
+    background: rgba(37, 99, 235, 0.05);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.campaign-form h3 {
+    font-size: 0.95rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+}
+
+.campaign-form .input-group {
+    margin-bottom: 1rem;
+}
+
+.campaign-form input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-top: 0.25rem;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 0.6rem;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+}
+
+/* Admin Actions (Stats Bar) */
+.admin-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.header-divider {
+    width: 1px;
+    height: 30px;
+    background: var(--border-color);
+    margin: 0 1rem;
+}
+
+.btn-icon {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    color: var(--text-primary);
+}
+
+.btn-icon:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+/* Insights Tab */
+.insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 1rem 0;
+}
+
+.insight-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    /* Align top for multiline text */
+    padding-bottom: 0.8rem;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.label-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.insight-item .label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.insight-item .desc {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-tertiary, #9ca3af);
+    margin-top: 2px;
+    line-height: 1.2;
+    max-width: 180px;
+}
+
+.insight-item .value {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
+    margin-left: 1rem;
+    white-space: nowrap;
+}
+
+/* Modal Table */
+.large-modal {
+    max-width: 900px !important;
+    width: 95%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-body {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.table-actions {
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.table-container {
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+#summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+#summary-table th,
+#summary-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#summary-table th {
+    background: var(--bg-secondary);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+#summary-table tr:hover {
+    background: var(--bg-hover);
+}
+
+
+/* Modal Header Refinement */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+
+.modal-header button {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    line-height: 1;
+    color: #ef4444;
+    /* Force red as shown in image arrow, or generic secondary */
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+
+.modal-header button:hover {
+    color: white;
+    background: #ef4444;
+}
+
+/* Old Modal CSS Removed to avoid conflicts */
+/* Import Instructions Modal & Styling Refinements */
+
+.modal-content {
+    /* Improve general modal spacing if needed */
+    padding: 2rem;
+}
+
+.modal-text {
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+.modal-text strong {
+    font-weight: 700;
+    color: var(--primary-color, #2563eb);
+    /* Highlight color */
+}
+
+/* Example Table Styling */
+.example-table-container {
+    background: var(--bg-secondary, #f9fafb);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: center;
+}
+
+.example-table {
+    width: 100%;
+    max-width: 500px;
+    /* Limit width for cleaner look */
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.example-table th,
+.example-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.example-table th {
+    background: var(--bg-hover, #f3f4f6);
+    font-weight: 700;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+}
+
+.example-table tr:last-child td {
+    border-bottom: none;
+}
+
+.example-table td:first-child {
+    font-weight: 600;
+}
+
+/* List Styling */
+.modal-list {
+    margin-bottom: 2rem;
+    padding-left: 1.25rem;
+    list-style-type: none;
+    /* Custom bullets or icons */
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.modal-list li {
+    margin-bottom: 0.8rem;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.modal-list li::before {
+    content: "•";
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1.2rem;
+    position: absolute;
+    left: 0;
+    top: -2px;
+}
+
+.modal-list strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Footer & Button */
+.modal-footer-center {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.modal-footer-center .btn-primary {
+    width: auto;
+    min-width: 150px;
+    font-size: 1rem;
+    padding: 0.75rem 2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 6px;
+    font-weight: 600;
 }

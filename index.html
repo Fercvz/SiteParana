@@ -11,11 +11,35 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js para gráficos eleitorais -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- SheetJS para Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
 
     <div class="app-container">
+        <!-- Top Stats Bar (Admin Only) -->
+        <div id="campaign-stats" class="campaign-stats hidden">
+            <div class="stat-item">
+                <span class="stat-label">Total Votos:</span>
+                <span id="global-votes" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Investimento Total:</span>
+                <span id="global-money" class="stat-value">R$ 0,00</span>
+            </div>
+            <div class="header-divider"></div>
+            <div class="admin-actions">
+                <button id="btn-summary" class="btn-icon" title="Tabela Resumo">📊 Ver Tabela</button>
+                <div class="import-wrapper">
+                    <input type="file" id="file-import" accept=".xlsx,.xls" hidden />
+                    <button id="btn-import" class="btn-icon" title="Importar Excel">📂 Importar Excel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Button Removed (Moved to Header) -->
+
         <!-- Professional Header -->
         <header class="site-header">
             <div class="brand-container">
@@ -35,6 +59,7 @@
                         </svg>
                     </button>
                 </div>
+                <button id="login-btn" class="login-btn">Entrar</button>
                 <button id="theme-toggle" aria-label="Alternar Tema">🌙</button>
             </div>
         </header>
@@ -141,12 +166,76 @@
                 <div class="sidebar-header">
                     <h2 id="city-name">Selecione uma cidade</h2>
                     <button id="close-sidebar" aria-label="Fechar">×</button>
+                    <div id="save-msg"></div>
                 </div>
 
                 <!-- Sistema de Abas -->
                 <div class="sidebar-tabs">
-                    <button class="tab-btn active" data-tab="info">📋 Informações</button>
-                    <button class="tab-btn" data-tab="eleitorado">🗳️ Eleitorado</button>
+                    <button class="tab-btn hidden" id="tab-btn-campaign" data-tab="campaign">Dados Campanha</button>
+                    <button class="tab-btn hidden" id="tab-btn-insights" data-tab="insights">Insights</button>
+                    <button class="tab-btn active" data-tab="info">Informações</button>
+                    <button class="tab-btn" data-tab="eleitorado">Eleitorado</button>
+                </div>
+
+                <div class="tab-content" id="tab-campaign">
+                    <div id="campaign-form" class="campaign-form">
+                        <h3>🗳️ Dados de Campanha</h3>
+                        <div class="input-group">
+                            <label>Votos Recebidos:</label>
+                            <input type="number" id="input-votes" placeholder="0">
+                        </div>
+                        <div class="input-group">
+                            <label>Investimento (R$):</label>
+                            <input type="number" id="input-money" placeholder="0.00" step="0.01">
+                        </div>
+                        <button id="btn-save-campaign" class="btn-primary">Salvar Dados</button>
+                    </div>
+                </div>
+
+                <!-- Aba: Insights (Admin) -->
+                <div class="tab-content" id="tab-insights">
+                    <div class="insights-list">
+                        <div class="insight-item">
+                            <div class="label-group">
+                                <span class="label">Votos Recebidos:</span>
+                            </div>
+                            <span class="value" id="ins-votes">-</span>
+                        </div>
+                        <div class="insight-item">
+                            <div class="label-group">
+                                <span class="label">Investimento (R$):</span>
+                            </div>
+                            <span class="value" id="ins-money">-</span>
+                        </div>
+                        <div class="insight-item">
+                            <div class="label-group">
+                                <span class="label">Votos Convertidos (%):</span>
+                                <small class="desc">Votos recebidos / Total de eleitores da cidade</small>
+                            </div>
+                            <span class="value" id="ins-conversion">-</span>
+                        </div>
+                        <div class="insight-item">
+                            <div class="label-group">
+                                <span class="label">Investimento por Voto:</span>
+                                <small class="desc">Investimento / Votos recebidos</small>
+                            </div>
+                            <span class="value" id="ins-cost-vote">-</span>
+                        </div>
+                        <div class="insight-item">
+                            <div class="label-group">
+                                <span class="label">Investimento por Habitante:</span>
+                                <small class="desc">Investimento / População total da cidade</small>
+                            </div>
+                            <span class="value" id="ins-cost-pop">-</span>
+                        </div>
+                        <div class="insight-item">
+                            <div class="label-group">
+                                <span class="label">Participação (%):</span>
+                                <small class="desc">Votos da cidade / Total de votos da campanha</small>
+                            </div>
+                            <span class="value" id="ins-share">-</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Aba: Informações -->
@@ -272,6 +361,109 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="close-login" class="close-modal">&times;</span>
+            <h2>Acesso Restrito</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <label>Usuário:</label>
+                    <input type="text" id="login-user" autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <label>Senha:</label>
+                    <input type="password" id="login-pass" autocomplete="current-password">
+                </div>
+                <!-- type="submit" enables Enter key automatically -->
+                <button type="submit" id="btn-perform-login" class="btn-primary full-width">Entrar</button>
+            </form>
+            <p id="login-msg" class="error-msg"></p>
+        </div>
+    </div>
+
+    <!-- Tabela Resumo Modal -->
+    <div id="summary-modal" class="modal hidden">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>Resumo Geral da Campanha</h3>
+                <button id="close-summary">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-actions">
+                    <button id="btn-export-excel" class="btn-primary">Exportar Excel</button>
+                </div>
+                <div class="table-container">
+                    <table id="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Cidade</th>
+                                <th>Votos</th>
+                                <th>Invest. (R$)</th>
+                                <th>Conv. (%)</th>
+                                <th>R$/Voto</th>
+                                <th>R$/Pop</th>
+                                <th>Part. (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Instructions Modal -->
+    <div id="import-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Instruções de Importação</h3>
+                <button id="close-import">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-text">Para importar os dados corretamente, sua planilha Excel deve seguir
+                    <strong>estritamente</strong> o modelo abaixo (nomes das colunas e cidades):
+                </p>
+
+                <div class="example-table-container">
+                    <table class="example-table">
+                        <thead>
+                            <tr>
+                                <th>Cidade</th>
+                                <th>Votos</th>
+                                <th>Investimento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Curitiba</td>
+                                <td>15000</td>
+                                <td>500000</td>
+                            </tr>
+                            <tr>
+                                <td>Londrina</td>
+                                <td>8000</td>
+                                <td>250000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <ul class="modal-list">
+                    <li>As colunas devem se chamar <strong>"Cidade"</strong>, <strong>"Votos"</strong> e
+                        <strong>"Investimento"</strong>.
+                    </li>
+                    <li>O nome das cidades deve coincidir exatamente com o cadastro do sistema.</li>
+                    <li>Cidades com nomes incorretos ou não cadastrados serão ignoradas.</li>
+                </ul>
+
+                <div class="modal-footer-center">
+                    <button id="btn-confirm-import" class="btn-primary">ENTENDI</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
