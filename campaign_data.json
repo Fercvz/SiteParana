@@ -1,0 +1,18 @@
+{
+  "maringa": {
+    "votes": 20,
+    "money": 150.0
+  },
+  "londrina": {
+    "votes": 50000,
+    "money": 250000.0
+  },
+  "bom_sucesso": {
+    "votes": 450,
+    "money": 2000.0
+  },
+  "peabiru": {
+    "votes": 10,
+    "money": 20.0
+  }
+}

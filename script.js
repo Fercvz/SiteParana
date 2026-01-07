@@ -114,9 +114,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
     }
 
-    // State - Dados Eleitorais
+    // State - Dados Eleitorais & Campanha
     let eleitoradoData = {};
+    let campaignData = {}; // Cache local de campanha
     let chartInstances = {};
+    let isLoggedIn = false;
+    let authToken = null;
 
     function initApp() {
         injectMockData(); // Ensure complete data coverage
@@ -127,8 +130,240 @@ document.addEventListener('DOMContentLoaded', async () => {
         initTabs();       // Sistema de abas
         loadEleitoradoData(); // Carrega dados eleitorais
 
+        // Novos Inicializadores de Campanha/Login
+        initLogin();
+        loadCampaignGlobalStats();
+
         // Initial Render
         updateMapDisplay();
+    }
+
+    // --- Auth & Campaign Logic ---
+    function initLogin() {
+        const loginBtn = document.getElementById('login-btn');
+        const loginModal = document.getElementById('login-modal');
+        const closeLogin = document.getElementById('close-login');
+        const btnPerform = document.getElementById('btn-perform-login');
+
+        // Abre modal
+        if (loginBtn) {
+            loginBtn.addEventListener('click', (e) => {
+                console.log('Login button clicked');
+                e.preventDefault(); // Prevent any weird default behaviors
+                if (isLoggedIn) {
+                    // Logout simples
+                    isLoggedIn = false;
+                    loginBtn.innerText = "Entrar";
+                    document.getElementById('campaign-stats').classList.add('hidden');
+
+                    // Esconde a aba de campanha
+                    const tabBtnCampaign = document.getElementById('tab-btn-campaign');
+                    if (tabBtnCampaign) {
+                        tabBtnCampaign.classList.add('hidden');
+                    }
+
+                    const tabBtnInsights = document.getElementById('tab-btn-insights');
+                    if (tabBtnInsights) {
+                        tabBtnInsights.classList.add('hidden');
+                    }
+
+                    if (activeTab && (activeTab.dataset.tab === 'campaign' || activeTab.dataset.tab === 'insights')) {
+                        document.querySelector('.tab-btn[data-tab="info"]').click();
+                    }
+
+                    toggleCampaignVisualizations(false);
+
+                    // Limpa campos de input para garantir
+                    document.getElementById('input-votes').value = "";
+                    document.getElementById('input-money').value = "";
+
+                    // Limpa textos de insights
+                    ['ins-votes', 'ins-money', 'ins-conversion', 'ins-cost-vote', 'ins-cost-pop', 'ins-share'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerText = "-";
+                    });
+
+                    alert("Você saiu do sistema.");
+                } else {
+                    loginModal.classList.remove('hidden');
+                    loginModal.style.display = ''; // Limpa inline style (setado/fechado por performLogin)
+                }
+            });
+        }
+
+        // Fecha modal
+        if (closeLogin) {
+            closeLogin.addEventListener('click', () => {
+                loginModal.classList.add('hidden');
+                document.getElementById('login-msg').innerText = "";
+            });
+        }
+
+        // Ação de Login (Form Submit - Robust "Enter" support)
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault(); // Stop page reload
+                performLogin();
+            });
+        }
+
+        // Manual keyup removed
+
+        // Salvar Campanha
+        const btnSave = document.getElementById('btn-save-campaign');
+        if (btnSave) {
+            btnSave.addEventListener('click', saveCampaignData);
+        }
+    }
+
+    async function performLogin() {
+        const user = (document.getElementById('login-user').value || '').trim();
+        const pass = (document.getElementById('login-pass').value || '').trim();
+        const msg = document.getElementById('login-msg');
+
+        // Feedback visual imediato
+        msg.innerText = "Verificando credenciais...";
+        msg.style.color = "var(--text-secondary)";
+
+        try {
+            const res = await fetch('http://localhost:8082/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                isLoggedIn = true;
+                authToken = data.token;
+
+                // Força o fechamento do modal
+                const modal = document.getElementById('login-modal');
+                if (modal) {
+                    modal.classList.add('hidden'); // CSS class
+                    modal.style.display = 'none';  // Inline styles fallback
+                }
+
+                document.getElementById('login-btn').innerText = "Sair";
+                document.getElementById('campaign-stats').classList.remove('hidden');
+                document.getElementById('campaign-stats').style.display = 'flex'; // Ensure visibility
+
+                // Exibe a aba de campanha
+                const tabBtnCampaign = document.getElementById('tab-btn-campaign');
+                if (tabBtnCampaign) {
+                    tabBtnCampaign.classList.remove('hidden');
+                    tabBtnCampaign.click(); // Auto-select tab
+                }
+
+                const tabBtnInsights = document.getElementById('tab-btn-insights');
+                if (tabBtnInsights) {
+                    tabBtnInsights.classList.remove('hidden');
+                }
+
+                // Limpa mensagem
+                msg.innerText = "";
+
+                // Atualiza UI se tiver cidade selecionada
+                if (activeCityId && typeof populateSidebar === 'function') {
+                    populateSidebar(activeCityId);
+                }
+
+                // Carrega dados globais
+                loadCampaignGlobalStats();
+                toggleCampaignVisualizations(true);
+
+            } else {
+                msg.style.color = "#ef4444"; // Red
+                if (res.status === 401) {
+                    msg.innerText = "Usuário ou senha incorretos.";
+                } else {
+                    msg.innerText = `Erro no servidor: ${res.status}`;
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            msg.style.color = "#ef4444";
+            msg.innerText = "Erro de conexão. Verifique o terminal.";
+        }
+    }
+
+    async function loadCampaignGlobalStats() {
+        try {
+            const res = await fetch('http://localhost:8082/api/campaign/data');
+            if (res.ok) {
+                campaignData = await res.json(); // Atualiza cache
+
+                let totalVotes = 0;
+                let totalMoney = 0;
+
+                Object.values(campaignData).forEach(c => {
+                    totalVotes += (c.votes || 0);
+                    totalMoney += (c.money || 0);
+                });
+
+                document.getElementById('global-votes').innerText = totalVotes.toLocaleString('pt-BR');
+                document.getElementById('global-money').innerText = totalMoney.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            }
+        } catch (e) {
+            console.warn("Erro ao carregar stats globais:", e);
+        }
+    }
+
+    function updateSidebarCampaign(slug) {
+        if (!isLoggedIn) return;
+
+        document.getElementById('save-msg').innerText = "";
+
+        // Preencher dados se existirem no cache
+        const data = campaignData[slug] || { votes: 0, money: 0 };
+
+        const inputVotes = document.getElementById('input-votes');
+        const inputMoney = document.getElementById('input-money');
+
+        if (inputVotes) inputVotes.value = data.votes || 0;
+        if (inputMoney) inputMoney.value = data.money || 0;
+    }
+
+    async function saveCampaignData() {
+        if (!activeCityId) return;
+
+        const votes = parseInt(document.getElementById('input-votes').value) || 0;
+        const money = parseFloat(document.getElementById('input-money').value) || 0;
+        const msg = document.getElementById('save-msg');
+
+        try {
+            const res = await fetch('http://localhost:8082/api/campaign/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    city_slug: activeCityId,
+                    votes: votes,
+                    money: money
+                })
+            });
+
+            if (res.ok) {
+                msg.style.color = 'green';
+                msg.innerText = "Salvo com sucesso!";
+
+                // Atualiza cache e totais
+                campaignData[activeCityId] = { votes, money };
+                loadCampaignGlobalStats();
+
+                // Atualiza Insights e Mapa
+                if (typeof updateInsights === 'function') {
+                    updateInsights(activeCityId);
+                }
+                updateMapDisplay();
+            } else {
+                msg.style.color = 'red';
+                msg.innerText = "Erro ao salvar.";
+            }
+        } catch (e) {
+            msg.style.color = 'red';
+            msg.innerText = "Erro de conexão.";
+        }
     }
 
     // Carrega dados eleitorais do TSE
@@ -285,17 +520,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Prepare Visualization Data
         let minVal = Infinity, maxVal = -Infinity;
         let dataField = null;
-        let filteredCities = []; // Lista de cidades filtradas
+        let useCampaignData = false;
+        let campaignField = null;
+        let filteredCities = [];
 
         if (currentVisMode === 'heatmap-pop') {
             dataField = 'habitantes';
         } else if (currentVisMode === 'heatmap-pib') {
             dataField = 'pib_per_capita';
+        } else if (currentVisMode === 'heatmap-votes') {
+            useCampaignData = true;
+            campaignField = 'votes';
+        } else if (currentVisMode === 'heatmap-money') {
+            useCampaignData = true;
+            campaignField = 'money';
         }
 
-        if (dataField) {
-            Object.values(citiesData).forEach(c => {
-                const val = parseFloat(c[dataField]) || 0;
+        if (dataField || useCampaignData) {
+            Object.keys(citiesData).forEach(slug => {
+                let val = 0;
+                if (useCampaignData) {
+                    const cData = campaignData[slug] || { votes: 0, money: 0 };
+                    val = parseFloat(cData[campaignField]) || 0;
+                } else {
+                    val = parseFloat(citiesData[slug][dataField]) || 0;
+                }
+
                 if (val < minVal) minVal = val;
                 if (val > maxVal) maxVal = val;
             });
@@ -316,10 +566,54 @@ document.addEventListener('DOMContentLoaded', async () => {
             let fill = '';
             if (currentVisMode === 'party') {
                 fill = PARTY_COLORS[city.partido] || '#ccc';
-            } else if (dataField) {
-                const val = parseFloat(city[dataField]) || 0;
-                const ratio = (val - minVal) / (maxVal - minVal);
-                fill = getHeatmapColor(ratio);
+            } else if (dataField || useCampaignData) {
+                let val = 0;
+                if (useCampaignData) {
+                    const cData = campaignData[path.id] || { votes: 0, money: 0 };
+                    val = parseFloat(cData[campaignField]) || 0;
+                } else {
+                    val = parseFloat(city[dataField]) || 0;
+                }
+
+                // 1. Zero check - Gray color
+                if (val === 0) {
+                    fill = '#e5e7eb'; // Light Gray
+                } else {
+                    let ratio = 0;
+
+                    // 2. Rank-Based Scaling for Pop/PIB (Guarantees distribution)
+                    if (dataField === 'habitantes' || dataField === 'pib_per_capita') {
+                        if (!window.mapSortedValues || window._sortedCacheKey !== dataField) {
+                            // Create cache of sorted positive values
+                            const values = Object.values(citiesData)
+                                .map(c => parseFloat(c[dataField]) || 0)
+                                .filter(v => v > 0)
+                                .sort((a, b) => a - b);
+                            window.mapSortedValues = values;
+                            window._sortedCacheKey = dataField;
+                        }
+
+                        // Find rank
+                        const sorted = window.mapSortedValues;
+                        let rank = 0;
+                        let lo = 0, hi = sorted.length - 1;
+                        while (lo <= hi) {
+                            const mid = (lo + hi) >> 1;
+                            if (sorted[mid] < val) lo = mid + 1;
+                            else hi = mid - 1;
+                        }
+                        rank = lo;
+
+                        ratio = rank / Math.max(sorted.length - 1, 1);
+
+                    } else {
+                        // Linear (Campanha)
+                        if (maxVal > minVal) {
+                            ratio = (val - minVal) / (maxVal - minVal);
+                        }
+                    }
+                    fill = getHeatmapColor(ratio);
+                }
             }
 
             // 3. Apply Styles to DOM
@@ -333,7 +627,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 path.classList.remove('dimmed');
                 path.classList.add('highlight-filter');
                 matchCount++;
-                // Adiciona cidade à lista de filtradas
                 filteredCities.push({
                     nome: city.nome,
                     partido: city.partido
@@ -344,14 +637,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Ordena cidades filtradas alfabeticamente
+        // Ordena cidades
         filteredCities.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
         // Update UI
         if (highlightCount) highlightCount.innerText = matchCount;
-        updateLegend(minVal, maxVal, dataField, filteredCities);
+        updateLegend(minVal, maxVal, (dataField || campaignField), filteredCities);
 
-        // Toggle wrapper class for general CSS hints
         if (currentVisMode !== 'none') mapContainer.classList.add('visualizing');
         else mapContainer.classList.remove('visualizing');
 
@@ -360,15 +652,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         else mapContainer.classList.remove('filtering');
     }
 
-    // Heatmap: Multi-stop gradient com mais cores para melhor interpretação
+    // Heatmap: "Turbo-like" Rainbow spectrum for high contrast
     function getHeatmapColor(t) {
-        // Gradiente: Azul escuro -> Azul claro -> Ciano -> Verde -> Amarelo -> Laranja -> Vermelho
-        if (t < 0.167) return interpolateColor('#1e3a8a', '#3b82f6', t / 0.167);           // Azul escuro -> Azul
-        if (t < 0.333) return interpolateColor('#3b82f6', '#06b6d4', (t - 0.167) / 0.166); // Azul -> Ciano
-        if (t < 0.5) return interpolateColor('#06b6d4', '#22c55e', (t - 0.333) / 0.167); // Ciano -> Verde
-        if (t < 0.667) return interpolateColor('#22c55e', '#eab308', (t - 0.5) / 0.167);   // Verde -> Amarelo
-        if (t < 0.833) return interpolateColor('#eab308', '#f97316', (t - 0.667) / 0.166); // Amarelo -> Laranja
-        return interpolateColor('#f97316', '#dc2626', (t - 0.833) / 0.167);                // Laranja -> Vermelho
+        // 0.0 (Low) -> 1.0 (High)
+        // Purple -> Blue -> Cyan -> Green -> Yellow -> Orange -> Red -> Dark Red
+        if (t < 0.14) return interpolateColor('#4c1d95', '#3b82f6', t / 0.14);          // Roxo Escuro -> Azul
+        if (t < 0.28) return interpolateColor('#3b82f6', '#06b6d4', (t - 0.14) / 0.14);  // Azul -> Ciano
+        if (t < 0.42) return interpolateColor('#06b6d4', '#22c55e', (t - 0.28) / 0.14);  // Ciano -> Verde
+        if (t < 0.57) return interpolateColor('#22c55e', '#eab308', (t - 0.42) / 0.15);  // Verde -> Amarelo
+        if (t < 0.71) return interpolateColor('#eab308', '#f97316', (t - 0.57) / 0.14);  // Amarelo -> Laranja
+        if (t < 0.85) return interpolateColor('#f97316', '#dc2626', (t - 0.71) / 0.14);  // Laranja -> Vermelho
+        return interpolateColor('#dc2626', '#7f1d1d', (t - 0.85) / 0.15);                // Vermelho -> Vinho
     }
 
     function interpolateColor(c1, c2, factor) {
@@ -414,6 +708,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (dataField === 'pib_per_capita') {
                 title = 'PIB per capita (Mapa de Calor)';
                 formatFn = (v) => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else if (dataField === 'votes') {
+                title = 'Campanha: Total de Votos';
+                formatFn = (v) => Math.round(v).toLocaleString('pt-BR');
+            } else if (dataField === 'money') {
+                title = 'Campanha: Investimento Total';
+                formatFn = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             }
 
             legendContainer.innerHTML = `<strong>${title}</strong>`;
@@ -421,24 +721,119 @@ document.addEventListener('DOMContentLoaded', async () => {
             div.style.display = 'flex';
             div.style.flexDirection = 'column';
             div.style.gap = '4px';
-            div.innerHTML = `
-                <div style="height:14px; background: linear-gradient(to right, #1e3a8a, #3b82f6, #06b6d4, #22c55e, #eab308, #f97316, #dc2626); border-radius:3px;"></div>
+
+            // Container para a barra com evento
+            const barContainer = document.createElement('div');
+            barContainer.style.position = 'relative';
+            const bar = document.createElement('div');
+            bar.style.height = '14px';
+            bar.style.background = 'linear-gradient(to right, #4c1d95, #3b82f6, #06b6d4, #22c55e, #eab308, #f97316, #dc2626, #7f1d1d)';
+            bar.style.borderRadius = '3px';
+            bar.style.cursor = 'crosshair';
+
+            // Eventos da régua
+            bar.addEventListener('mousemove', (e) => {
+                const rect = bar.getBoundingClientRect();
+                const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                const pct = x / rect.width;
+
+                let val = 0;
+                // Reverse calculation (Approximate for Rank-based, exact for Linear)
+                if ((dataField === 'habitantes' || dataField === 'pib_per_capita') && window.mapSortedValues) {
+                    // Rank-based inverse
+                    const idx = Math.floor(pct * (window.mapSortedValues.length - 1));
+                    val = window.mapSortedValues[idx];
+                } else if (dataField === 'habitantes' || dataField === 'pib_per_capita') {
+                    // Fallback Log inverse if cache missing
+                    const minLog = Math.log(Math.max(min, 1));
+                    const maxLog = Math.log(Math.max(max, 1));
+                    val = Math.exp(minLog + pct * (maxLog - minLog));
+                } else {
+                    // Linear inverse
+                    val = min + pct * (max - min);
+                }
+
+                // Show tooltip
+                const tooltip = document.getElementById('tooltip');
+                tooltip.style.left = e.pageX + 15 + 'px';
+                tooltip.style.top = e.pageY + 15 + 'px';
+                tooltip.innerHTML = `<strong>${formatFn(val)}</strong>`;
+                tooltip.classList.remove('hidden');
+            });
+
+            bar.addEventListener('mouseleave', () => {
+                document.getElementById('tooltip').classList.add('hidden');
+            });
+
+            barContainer.appendChild(bar);
+            div.appendChild(barContainer);
+
+            div.innerHTML += `
                 <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
                     <span>${formatFn(min)}</span>
                     <span>${formatFn(max)}</span>
                 </div>
             `;
+
+            // Re-append bar (hacky due to innerHTML overwrite above, let's fix)
+            // Properly append structure
+            div.innerHTML = '';
+            div.appendChild(barContainer);
+            const rangeLabels = document.createElement('div');
+            rangeLabels.style.display = 'flex';
+            rangeLabels.style.justifyContent = 'space-between';
+            rangeLabels.style.fontSize = '0.75rem';
+            rangeLabels.innerHTML = `<span>${formatFn(min)}</span><span>${formatFn(max)}</span>`;
+            div.appendChild(rangeLabels);
+
             legendContainer.appendChild(div);
             legendContainer.classList.remove('hidden');
         }
 
-        // Mostrar lista de cidades filtradas quando há filtro por partido
         if (filters.party !== 'all' && filteredCities.length > 0) {
             updateFilteredCitiesList(filteredCities);
         } else {
             // Remove a lista se não houver filtro por partido
             const existingList = document.getElementById('filtered-cities-panel');
             if (existingList) existingList.remove();
+        }
+    }
+
+    function toggleCampaignVisualizations(show) {
+        const visSelect = document.getElementById('vis-mode');
+        if (!visSelect) return;
+
+        // IDs of campaign options
+        const CAMPAIGN_OPTS = ['heatmap-votes', 'heatmap-money'];
+
+        if (show) {
+            // Check if they exist, if not add them
+            if (!visSelect.querySelector('option[value="heatmap-votes"]')) {
+                const opt1 = document.createElement('option');
+                opt1.value = 'heatmap-votes';
+                opt1.innerText = 'Total de Votos (Mapa de Calor)';
+                opt1.style.color = '#dc2626'; // Highlight as admin feature
+                visSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = 'heatmap-money';
+                opt2.innerText = 'Investimento Total (Mapa de Calor)';
+                opt2.style.color = '#dc2626';
+                visSelect.appendChild(opt2);
+            }
+        } else {
+            // Se o modo atual for restrito, reseta para padrão antes de remover as opções
+            if (CAMPAIGN_OPTS.includes(currentVisMode) || CAMPAIGN_OPTS.includes(visSelect.value)) {
+                visSelect.value = 'none';
+                currentVisMode = 'none';
+                updateMapDisplay();
+            }
+
+            // Remove options
+            CAMPAIGN_OPTS.forEach(val => {
+                const opt = visSelect.querySelector(`option[value="${val}"]`);
+                if (opt) opt.remove();
+            });
         }
     }
 
@@ -635,6 +1030,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         set('stat-pib', pib);
         // Atualiza Aba de Eleitorado
         updateEleitoradoTab(id);
+
+        // Atualiza Aba de Campanha (Admin)
+        if (typeof updateSidebarCampaign === 'function') {
+            updateSidebarCampaign(id);
+        }
+
+        // Atualiza Aba Insights (Admin)
+        if (isLoggedIn && typeof updateInsights === 'function') {
+            updateInsights(id);
+        }
     }
 
     // Expose for debug
@@ -1215,5 +1620,311 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize Chat
     initChat();
+
+
+    // --- Funções de Campanha: Insights & Tabelas (Admin) ---
+
+    // Atualiza a aba Insights com métricas calculadas
+    function updateInsights(slug) {
+        if (!isLoggedIn) return;
+
+        const cData = campaignData[slug] || { votes: 0, money: 0 };
+        const city = citiesData[slug];
+        let eleitorado = 0;
+
+        // Tenta achar dados eleitorais
+        let key = slug.toLowerCase().trim().replace(/-/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (eleitoradoData[key]) {
+            eleitorado = eleitoradoData[key].total_eleitores;
+        }
+
+        const votes = parseFloat(cData.votes) || 0;
+        const money = parseFloat(cData.money) || 0;
+        const pop = city ? (city.habitantes || 0) : 0;
+        let globalVotes = 0;
+
+        // Calcula Global Votes para participação
+        Object.values(campaignData).forEach(d => globalVotes += (d.votes || 0));
+
+        // a. Votos Recebidos
+        setStat('ins-votes', Math.round(votes).toLocaleString('pt-BR'));
+
+        // b. Investimento
+        setStat('ins-money', money.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+
+        // c. Votos Convertidos (% do eleitorado da cidade)
+        const conversion = eleitorado > 0 ? (votes / eleitorado) * 100 : 0;
+        setStat('ins-conversion', conversion.toFixed(2) + '%');
+
+        // d. Investimento por Voto Convertido (R$/voto)
+        const costVote = votes > 0 ? (money / votes) : 0;
+        setStat('ins-cost-vote', costVote.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+
+        // e. Investimento por População (R$/pop)
+        const costPop = pop > 0 ? (money / pop) : 0;
+        setStat('ins-cost-pop', costPop.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+
+        // f. Participação Global (% votos da cidade / votos totais da campanha)
+        const share = globalVotes > 0 ? (votes / globalVotes) * 100 : 0;
+        setStat('ins-share', share.toFixed(2) + '%');
+    }
+
+    function setStat(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    }
+
+    // --- Tabela Resumo ---
+    function openSummaryModal() {
+        const modal = document.getElementById('summary-modal');
+        const tbody = document.querySelector('#summary-table tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        let globalVotes = 0;
+        Object.values(campaignData).forEach(d => globalVotes += (d.votes || 0));
+
+        const citiesList = Object.keys(citiesData)
+            .filter(slug => {
+                const name = citiesData[slug].nome || "";
+                // Remove linhas de metadados/lixo (Notas, Fontes, etc)
+                if (name.includes('Nota') || name.includes('Fonte') || name.length > 50) return false;
+                if (name.startsWith('Escolariza') || name.startsWith('Popula') || name.startsWith('Área') || name.startsWith('Densidade')) return false;
+                return true;
+            })
+            .map(slug => {
+                const city = citiesData[slug];
+                const cData = campaignData[slug] || { votes: 0, money: 0 };
+
+                let key = slug.toLowerCase().trim().replace(/-/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const eleitorado = eleitoradoData[key] ? eleitoradoData[key].total_eleitores : 0;
+
+                const votes = cData.votes || 0;
+                const money = cData.money || 0;
+                const pop = city.habitantes || 0;
+
+                const conversion = eleitorado > 0 ? (votes / eleitorado) * 100 : 0;
+                const costVote = votes > 0 ? (money / votes) : 0;
+                const costPop = pop > 0 ? (money / pop) : 0;
+                const share = globalVotes > 0 ? (votes / globalVotes) * 100 : 0;
+
+                return {
+                    name: city.nome,
+                    votes, money, conversion, costVote, costPop, share
+                };
+            });
+
+        // Ordenar por Votos (Decrescente)
+        citiesList.sort((a, b) => b.votes - a.votes);
+
+        // Função de renderização interna
+        const renderTable = (items) => {
+            tbody.innerHTML = '';
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:1rem; color:var(--text-secondary);">Nenhuma cidade encontrada.</td></tr>';
+                return;
+            }
+            items.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${c.name}</td>
+                    <td>${c.votes.toLocaleString('pt-BR')}</td>
+                    <td>${c.money.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td>${c.conversion.toFixed(2)}%</td>
+                    <td>${c.costVote.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td>${c.costPop.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td>${c.share.toFixed(2)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        // Renderização inicial
+        renderTable(citiesList);
+
+        // Configurar busca (remove listener antigo clonando input ou apenas sobrescrevendo oninput)
+        const searchInput = document.getElementById('summary-search');
+        if (searchInput) {
+            searchInput.value = ''; // Reset
+            searchInput.oninput = (e) => {
+                const term = e.target.value.toLowerCase();
+                const filtered = citiesList.filter(c => c.name.toLowerCase().includes(term));
+                renderTable(filtered);
+            };
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function exportSummaryToExcel() {
+        const table = document.getElementById('summary-table');
+        const wb = XLSX.utils.table_to_book(table, { sheet: "Resumo Campanha" });
+
+        XLSX.writeFile(wb, "Resumo_Campanha_Parana.xlsx");
+    }
+
+    // --- Importação Excel ---
+    function triggerImport() {
+        // Abre o modal de instruções primeiro
+        document.getElementById('import-modal').classList.remove('hidden');
+    }
+
+    async function handleExcelImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+                // Converte para JSON (header: 1 retorna array de arrays para verificar colunas)
+                const rawData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                if (rawData.length === 0) {
+                    alert("Arquivo vazio.");
+                    return;
+                }
+
+                // Validação Estrita de Colunas (Linha 0)
+                const headers = rawData[0].map(h => h ? h.toString().trim() : "");
+                const required = ['Cidade', 'Votos', 'Investimento'];
+                const hasCidade = headers.includes('Cidade');
+                const hasVotos = headers.includes('Votos');
+                const hasInvest = headers.includes('Investimento');
+
+                if (!hasCidade || !hasVotos || !hasInvest) {
+                    alert("ERRO: A tabela não está no padrão.\n\nColunas obrigatórias não encontradas: Cidade, Votos, Investimento.\nVerifique se os nomes estão escritos corretamente e tente novamente.");
+                    return;
+                }
+
+                // Processar Dados
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                const bulkItems = [];
+
+                // Mapeamento de slugs
+                const nameToSlug = {};
+                Object.keys(citiesData).forEach(slug => {
+                    const cleanName = citiesData[slug].nome.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    nameToSlug[cleanName] = slug;
+                });
+
+                let successCount = 0;
+                let ignoredCount = 0;
+
+                for (let row of jsonData) {
+                    // Normaliza chave da cidade (suporta "Cidade " com espaço etc)
+                    // Como validamos header, aceitamos o row['Cidade']
+                    let cityName = row['Cidade'];
+
+                    if (!cityName) continue;
+
+                    const clean = cityName.toString().toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const slug = nameToSlug[clean];
+
+                    if (!slug) {
+                        // Cidade não encontrada no banco -> Ignora a planilha?
+                        // O usuário disse: "se existir outro nome da cidade a planilha deve ser ignorada"
+                        // Vou rejeitar TUDO se encontrar uma cidade inválida?
+                        // "A tabela só deve aceitar os nomes das cidades do banco de dados do site, se existir outro nome da cidade a planilha deve ser ignorada"
+                        // Isso sugere rejeição total.
+                        alert(`ERRO: A cidade "${cityName}" não foi encontrada no banco de dados do sistema.\n\nA importação foi cancelada.A planilha deve conter apenas cidades válidas do Paraná.`);
+                        return;
+                    }
+
+                    const votes = parseInt(row['Votos']) || 0;
+                    const money = parseFloat(row['Investimento']) || 0;
+
+                    bulkItems.push({
+                        city_slug: slug,
+                        votes: votes,
+                        money: money
+                    });
+                }
+
+                if (bulkItems.length > 0) {
+                    // Envia pro backend
+                    const res = await fetch('http://localhost:8082/api/campaign/update_bulk', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ items: bulkItems })
+                    });
+
+                    if (res.ok) {
+                        alert(`Sucesso! ${bulkItems.length} cidades atualizadas.`);
+                        // Recarrega dados
+                        loadCampaignGlobalStats();
+                        // Se tiver cidade aberta, atualiza sidebar
+                        if (activeCityId) {
+                            populateSidebar(activeCityId);
+                        }
+                        updateMapDisplay();
+
+                        // Fecha modal de importação se estiver aberto (já deve estar fechado pelo ENTENDI, mas garante)
+                        document.getElementById('import-modal').classList.add('hidden');
+
+                    } else {
+                        const errText = await res.text();
+                        console.error("Erro Servidor:", errText);
+                        alert(`Erro ao salvar dados no servidor (Status ${res.status}):\n${errText}`);
+                    }
+                } else {
+                    alert("Nenhum dado válido encontrado para importação.");
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao processar arquivo Excel.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        // Limpa input
+        e.target.value = '';
+    }
+
+    // Inicializa novos listeners
+    function initAdminListeners() {
+        // Botão Tabela
+        const btnSummary = document.getElementById('btn-summary');
+        if (btnSummary) btnSummary.addEventListener('click', openSummaryModal);
+
+        // Modal Close (Summary)
+        const closeSum = document.getElementById('close-summary');
+        if (closeSum) closeSum.addEventListener('click', () => {
+            document.getElementById('summary-modal').classList.add('hidden');
+        });
+
+        // Export
+        const btnExp = document.getElementById('btn-export-excel');
+        if (btnExp) btnExp.addEventListener('click', exportSummaryToExcel);
+
+        // Import Button (Barra) -> Abre Modal Instruções
+        const btnImp = document.getElementById('btn-import');
+        if (btnImp) btnImp.addEventListener('click', triggerImport);
+
+        // --- Import Modal Listeners ---
+        // X fecha modal e cancela
+        const closeImp = document.getElementById('close-import');
+        if (closeImp) closeImp.addEventListener('click', () => {
+            document.getElementById('import-modal').classList.add('hidden');
+        });
+
+        // ENTENDI -> Clica no input file
+        const btnConfirmImp = document.getElementById('btn-confirm-import');
+        if (btnConfirmImp) btnConfirmImp.addEventListener('click', () => {
+            document.getElementById('import-modal').classList.add('hidden');
+            document.getElementById('file-import').click();
+        });
+
+        // Ocorre quando arquivo é selecionado
+        const fileImp = document.getElementById('file-import');
+        if (fileImp) fileImp.addEventListener('change', handleExcelImport);
+    }
+
+    // Auto-init listeners immediately (DOM is ready)
+    initAdminListeners();
 
 }); // End DOMContentLoaded Scope
