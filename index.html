@@ -31,7 +31,7 @@
             <div class="header-divider"></div>
             <div class="admin-actions">
                 <button id="btn-summary" class="btn-icon" title="Tabela Resumo">📊 Ver Tabela</button>
-                <div class="import-wrapper">
+                <div class="import-wrapper" style="display:inline-block;">
                     <input type="file" id="file-import" accept=".xlsx,.xls" hidden />
                     <button id="btn-import" class="btn-icon" title="Importar Excel">📂 Importar Excel</button>
                 </div>
@@ -417,7 +417,7 @@
 
     <!-- Import Instructions Modal -->
     <div id="import-modal" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content medium-modal">
             <div class="modal-header">
                 <h3>Instruções de Importação</h3>
                 <button id="close-import">×</button>
@@ -460,7 +460,7 @@
                 </ul>
 
                 <div class="modal-footer-center">
-                    <button id="btn-confirm-import" class="btn-primary">ENTENDI</button>
+                    <button id="btn-confirm-import" class="btn-primary">SELECIONAR ARQUIVO</button>
                 </div>
             </div>
         </div>

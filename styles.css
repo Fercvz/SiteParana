@@ -24,6 +24,8 @@
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --backdrop-blur: blur(12px);
+    --bg-secondary: #f9fafb;
+    --bg-hover: #f3f4f6;
     --border-radius: 12px;
 }
 
@@ -32,6 +34,10 @@
     --header-bg: rgba(15, 23, 42, 0.85);
     --sidebar-bg: rgba(30, 41, 59, 0.95);
     --card-bg: #1e293b;
+    --bg-secondary: #334155;
+    /* Slate-700 */
+    --bg-hover: #475569;
+    /* Slate-600 */
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --accent-color: #3b82f6;
@@ -176,9 +182,36 @@ body {
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(12px);
+    max-height: 85vh;
+    /* Prevent overflowing screen */
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
+}
+
+.modal-body {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 0.5rem;
+    /* Avoid scrollbar overlapping text */
+}
+
+/* Custom Scrollbar for modal body */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.medium-modal {
+    width: 600px !important;
+    max-width: 95vw;
 }
 
 [data-theme="dark"] .modal-content {

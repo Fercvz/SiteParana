@@ -133,9 +133,66 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Novos Inicializadores de Campanha/Login
         initLogin();
         loadCampaignGlobalStats();
+        initDraggableModals();
 
         // Initial Render
         updateMapDisplay();
+    }
+
+    // --- Draggable Modals ---
+    function initDraggableModals() {
+        const modals = document.querySelectorAll('.modal-content');
+
+        modals.forEach(modal => {
+            const header = modal.querySelector('.modal-header') || modal.querySelector('h2'); // h2 for login modal
+            if (!header) return;
+
+            header.style.cursor = 'move';
+
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            header.addEventListener('mousedown', dragStart);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('mousemove', drag);
+
+            function dragStart(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+
+                if (e.target === header || header.contains(e.target)) {
+                    isDragging = true;
+                }
+            }
+
+            function dragEnd(e) {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+
+                    xOffset = currentX;
+                    yOffset = currentY;
+
+                    setTranslate(currentX, currentY, modal);
+                }
+            }
+
+            function setTranslate(xPos, yPos, el) {
+                el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+            }
+        });
     }
 
     // --- Auth & Campaign Logic ---
@@ -148,7 +205,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Abre modal
         if (loginBtn) {
             loginBtn.addEventListener('click', (e) => {
-                console.log('Login button clicked');
                 e.preventDefault(); // Prevent any weird default behaviors
                 if (isLoggedIn) {
                     // Logout simples
@@ -167,6 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         tabBtnInsights.classList.add('hidden');
                     }
 
+                    const activeTab = document.querySelector('.tab-btn.active');
                     if (activeTab && (activeTab.dataset.tab === 'campaign' || activeTab.dataset.tab === 'insights')) {
                         document.querySelector('.tab-btn[data-tab="info"]').click();
                     }
@@ -372,7 +429,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const response = await fetch('dados_eleitorais.json');
             if (response.ok) {
                 eleitoradoData = await response.json();
-                console.log(`Dados eleitorais carregados: ${Object.keys(eleitoradoData).length} cidades`);
             }
         } catch (e) {
             console.warn('Dados eleitorais não encontrados:', e);
@@ -1757,11 +1813,108 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.remove('hidden');
     }
 
-    function exportSummaryToExcel() {
-        const table = document.getElementById('summary-table');
-        const wb = XLSX.utils.table_to_book(table, { sheet: "Resumo Campanha" });
+    async function exportSummaryToExcel() {
+        console.log("Iniciando exportação...");
+        // 1. Recalcular Dados (Fonte da Verdade Limpa)
+        let globalVotes = 0;
+        Object.values(campaignData).forEach(d => globalVotes += (d.votes || 0));
 
-        XLSX.writeFile(wb, "Resumo_Campanha_Parana.xlsx");
+        const data = Object.keys(citiesData)
+            .filter(slug => {
+                const name = citiesData[slug].nome || "";
+                if (name.includes('Nota') || name.includes('Fonte') || name.length > 50) return false;
+                if (name.startsWith('Escolariza') || name.startsWith('Popula') || name.startsWith('Área') || name.startsWith('Densidade')) return false;
+                return true;
+            })
+            .map(slug => {
+                const city = citiesData[slug];
+                const cData = campaignData[slug] || { votes: 0, money: 0 };
+                let key = slug.toLowerCase().trim().replace(/-/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const eleitorado = eleitoradoData[key] ? eleitoradoData[key].total_eleitores : 0;
+                const votes = cData.votes || 0;
+                const money = cData.money || 0;
+                const pop = parseInt(city.habitantes.toString().replace(/\./g, '')) || 0;
+
+                const conversion = eleitorado > 0 ? (votes / eleitorado) * 100 : 0;
+                const costVote = votes > 0 ? (money / votes) : 0;
+                const costPop = pop > 0 ? (money / pop) : 0;
+                const share = globalVotes > 0 ? (votes / globalVotes) * 100 : 0;
+
+                return {
+                    "Cidade": city.nome,
+                    "Votos": votes,
+                    "Investimento (R$)": money,
+                    "Conversão (%)": parseFloat(conversion.toFixed(2)),
+                    "R$/Voto": parseFloat(costVote.toFixed(2)),
+                    "R$/Pop": parseFloat(costPop.toFixed(2)),
+                    "Participação (%)": parseFloat(share.toFixed(2))
+                };
+            });
+
+        // Ordenar por Votos
+        data.sort((a, b) => b["Votos"] - a["Votos"]);
+
+        if (data.length === 0) {
+            alert("Não há dados para exportar.");
+            return;
+        }
+
+        // 2. Mapear para Modelo da API (Backend Python)
+        const apiItems = data.map(item => ({
+            city: item["Cidade"],
+            votes: item["Votos"],
+            investment: item["Investimento (R$)"],
+            conversion: item["Conversão (%)"],
+            cost_per_vote: item["R$/Voto"],
+            cost_per_pop: item["R$/Pop"],
+            share: item["Participação (%)"]
+        }));
+
+        try {
+            alert("Solicitando arquivo ao servidor... Aguarde.");
+
+            const res = await fetch('http://localhost:8082/api/export_excel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: apiItems })
+            });
+
+            if (!res.ok) {
+                const txt = await res.text();
+                throw new Error(txt || "Falha na geração do arquivo.");
+            }
+
+            const data = await res.json();
+
+            if (data.download_url) {
+                // Adiciona timestamp para evitar cache do navegador (crucial para o Chrome)
+                const downloadLink = `http://localhost:8082${data.download_url}?t=${Date.now()}`;
+
+                console.log("Tentando download via link:", downloadLink);
+
+                // Método 1: Criação de Link (Padrão)
+                const a = document.createElement('a');
+                a.href = downloadLink;
+                a.setAttribute('download', 'Resumo_Campanha_Parana.xlsx');
+                a.target = '_blank'; // Força nova aba para garantir que o Chrome não bloqueie
+                document.body.appendChild(a);
+                a.click();
+
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                }, 500);
+
+            } else {
+                throw new Error("URL de download não retornada pelo servidor.");
+            }
+
+            console.log("Download via Backend concluído.");
+
+        } catch (error) {
+            console.error("Erro na exportação via servidor:", error);
+            alert("Erro ao exportar arquivo: " + error.message);
+        }
     }
 
     // --- Importação Excel ---
@@ -1771,78 +1924,113 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function handleExcelImport(e) {
+        console.log("handleExcelImport triggered");
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+            console.log("No file selected");
+            return;
+        }
+        console.log("File selected:", file.name);
 
         const reader = new FileReader();
         reader.onload = async (evt) => {
+            console.log("FileReader loaded data");
             try {
                 const data = new Uint8Array(evt.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 
-                // Converte para JSON (header: 1 retorna array de arrays para verificar colunas)
+                // Converte para Matriz de Dados (Array de Arrays)
+                // Isso é mais seguro que JSON com chaves, pois evita problemas com espaços em cabeçalhos
                 const rawData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
-                if (rawData.length === 0) {
-                    alert("Arquivo vazio.");
+                if (rawData.length < 2) {
+                    alert("Arquivo vazio ou sem dados (apenas cabeçalho).");
                     return;
                 }
 
-                // Validação Estrita de Colunas (Linha 0)
-                const headers = rawData[0].map(h => h ? h.toString().trim() : "");
-                const required = ['Cidade', 'Votos', 'Investimento'];
-                const hasCidade = headers.includes('Cidade');
-                const hasVotos = headers.includes('Votos');
-                const hasInvest = headers.includes('Investimento');
+                // 1. Identificar índices das colunas (ignorando case e espaços)
+                const headerRow = rawData[0].map(h => h ? h.toString().trim() : "");
+                const cleanHeaders = headerRow.filter(h => h !== "");
 
-                if (!hasCidade || !hasVotos || !hasInvest) {
-                    alert("ERRO: A tabela não está no padrão.\n\nColunas obrigatórias não encontradas: Cidade, Votos, Investimento.\nVerifique se os nomes estão escritos corretamente e tente novamente.");
+                // Validação 1 & 2: Colunas Corretas e Únicas
+                // Esperado: Cidade, Votos, Investimento
+
+                // Normaliza para verificar presença
+                const lowerHeaders = headerRow.map(h => h.toLowerCase());
+                const idxCidade = lowerHeaders.indexOf('cidade');
+                const idxVotos = lowerHeaders.indexOf('votos');
+                const idxInvest = lowerHeaders.findIndex(h => h.includes('investimento'));
+
+                // Verificação de nomes (existência)
+                if (idxCidade === -1 || idxVotos === -1 || idxInvest === -1) {
+                    alert("A tabela não foi importada, por conta de não atender as especificações.\n\nMotivo: As colunas obrigatórias não foram encontradas.\nEsperado: Cidade, Votos, Investimento.");
                     return;
                 }
 
-                // Processar Dados
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                // Verificação de Quantidade (Não pode ter colunas extras)
+                if (cleanHeaders.length !== 3) {
+                    alert(`A tabela não foi importada, por conta de não atender as especificações.\n\nMotivo: A tabela deve conter APENAS as 3 colunas solicitadas.\nEncontradas: ${cleanHeaders.length} colunas.`);
+                    return;
+                }
+
+                // 2. Processar Linhas e Validar Cidades
                 const bulkItems = [];
-
-                // Mapeamento de slugs
                 const nameToSlug = {};
+
+                // Cache de slugs normalizados
                 Object.keys(citiesData).forEach(slug => {
                     const cleanName = citiesData[slug].nome.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     nameToSlug[cleanName] = slug;
                 });
 
-                let successCount = 0;
-                let ignoredCount = 0;
+                let errors = [];
 
-                for (let row of jsonData) {
-                    // Normaliza chave da cidade (suporta "Cidade " com espaço etc)
-                    // Como validamos header, aceitamos o row['Cidade']
-                    let cityName = row['Cidade'];
+                for (let i = 1; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    if (!row || row.length === 0) continue;
 
-                    if (!cityName) continue;
+                    let cityName = row[idxCidade];
+                    const hasData = row.some(cell => cell !== undefined && cell !== null && cell !== "");
+                    if (!hasData) continue;
 
+                    if (!cityName) {
+                        errors.push(`Linha ${i + 1}: Nome da cidade vazio.`);
+                        continue;
+                    }
+
+                    // Normalização
                     const clean = cityName.toString().toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     const slug = nameToSlug[clean];
 
                     if (!slug) {
-                        // Cidade não encontrada no banco -> Ignora a planilha?
-                        // O usuário disse: "se existir outro nome da cidade a planilha deve ser ignorada"
-                        // Vou rejeitar TUDO se encontrar uma cidade inválida?
-                        // "A tabela só deve aceitar os nomes das cidades do banco de dados do site, se existir outro nome da cidade a planilha deve ser ignorada"
-                        // Isso sugere rejeição total.
-                        alert(`ERRO: A cidade "${cityName}" não foi encontrada no banco de dados do sistema.\n\nA importação foi cancelada.A planilha deve conter apenas cidades válidas do Paraná.`);
-                        return;
+                        // Validação 3: Apenas cidades existentes
+                        errors.push(`Linha ${i + 1}: Cidade "${cityName}" não pertence ao cadastro do Paraná.`);
+                        continue;
                     }
 
-                    const votes = parseInt(row['Votos']) || 0;
-                    const money = parseFloat(row['Investimento']) || 0;
+                    const votes = parseInt(row[idxVotos]) || 0;
+
+                    let rawMoney = row[idxInvest];
+                    let money = 0;
+                    if (typeof rawMoney === 'string') {
+                        rawMoney = rawMoney.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+
+                        money = parseFloat(rawMoney) || 0;
+                    } else if (typeof rawMoney === 'number') {
+                        money = rawMoney;
+                    }
 
                     bulkItems.push({
                         city_slug: slug,
                         votes: votes,
                         money: money
                     });
+                }
+
+                if (errors.length > 0) {
+                    alert(`A tabela não foi importada, por conta de não atender as especificações.\n\nErros encontrados:\n${errors.slice(0, 5).join('\n')}\n${errors.length > 5 ? '...e mais ' + (errors.length - 5) + ' erros.' : ''}`);
+                    return;
                 }
 
                 if (bulkItems.length > 0) {
@@ -1876,13 +2064,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
             } catch (err) {
-                console.error(err);
-                alert("Erro ao processar arquivo Excel.");
+                console.error("Erro crítico no processamento:", err);
+                alert(`Ocorreu um erro ao processar o arquivo Excel:\n\n${err.message || err.toString()}`);
             }
         };
         reader.readAsArrayBuffer(file);
         // Limpa input
-        e.target.value = '';
+
     }
 
     // Inicializa novos listeners
@@ -1912,11 +2100,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('import-modal').classList.add('hidden');
         });
 
-        // ENTENDI -> Clica no input file
+        // ENTENDI / SELECIONAR -> Clica no input file
         const btnConfirmImp = document.getElementById('btn-confirm-import');
-        if (btnConfirmImp) btnConfirmImp.addEventListener('click', () => {
+        if (btnConfirmImp) btnConfirmImp.addEventListener('click', (e) => {
+            e.preventDefault(); // Evita comportamentos padrão
+            const fileInput = document.getElementById('file-import');
+            if (fileInput) {
+                // Reseta o valor para permitir selecionar o mesmo arquivo novamente (caso tenha dado erro antes)
+                fileInput.value = "";
+                // Força o clique no input
+                fileInput.click();
+            } else {
+                alert("Erro: Campo de arquivo não encontrado.");
+            }
+            // Fecha modal apenas depois (opcional, manter ou não, mas o timeout pode ajudar)
             document.getElementById('import-modal').classList.add('hidden');
-            document.getElementById('file-import').click();
         });
 
         // Ocorre quando arquivo é selecionado
