@@ -1,0 +1,137 @@
+[
+  {
+    "cityId": "alvorada_do_sul",
+    "cityName": "Alvorada do Sul",
+    "ano": 2020,
+    "valor": 1000.0,
+    "area": "Saúde",
+    "tipo": "Impositiva - Individual",
+    "descricao": "Custeio de Unidades Básicas de Saúde"
+  },
+  {
+    "cityId": "alvorada_do_sul",
+    "cityName": "Alvorada do Sul",
+    "ano": 2021,
+    "valor": 1500.0,
+    "area": "Saúde",
+    "tipo": "Impositiva - Individual",
+    "descricao": "Custeio em Saúde"
+  },
+  {
+    "cityId": "alvorada_do_sul",
+    "cityName": "Alvorada do Sul",
+    "ano": 2023,
+    "valor": 3000.0,
+    "area": "Educação",
+    "tipo": "Bancada",
+    "descricao": "Apoio ao Desenvolvimento da Educação Básica - APAE's (instituição não pode receber o valor - remanejada FMS Curitiba)"
+  },
+  {
+    "cityId": "alvorada_do_sul",
+    "cityName": "Alvorada do Sul",
+    "ano": 2024,
+    "valor": 2000.0,
+    "area": "Infraestrutura",
+    "tipo": "Impositiva - Individual",
+    "descricao": "CONSTRUÇÃO DO MONUMENTO CRISTO REDENTOR"
+  },
+  {
+    "cityId": "alvorada_do_sul",
+    "cityName": "Alvorada do Sul",
+    "ano": 2025,
+    "valor": 500.0,
+    "area": "Infraestrutura",
+    "tipo": "Estado",
+    "descricao": "CENTRO DE DESENVOLVIMENTO ECONÔMICO"
+  },
+  {
+    "cityId": "londrina",
+    "cityName": "Londrina",
+    "ano": 2020,
+    "valor": 5000.0,
+    "area": "Infraestrutura",
+    "tipo": "Bancada",
+    "descricao": "TESTE 1 LONDRINA"
+  },
+  {
+    "cityId": "londrina",
+    "cityName": "Londrina",
+    "ano": 2021,
+    "valor": 1500.0,
+    "area": "Infraestrutura",
+    "tipo": "Bancada",
+    "descricao": "TESTE 2 LONDRINA"
+  },
+  {
+    "cityId": "londrina",
+    "cityName": "Londrina",
+    "ano": 2023,
+    "valor": 5000.0,
+    "area": "Educação",
+    "tipo": "Estado",
+    "descricao": "ALO"
+  },
+  {
+    "cityId": "londrina",
+    "cityName": "Londrina",
+    "ano": 2024,
+    "valor": 6000.0,
+    "area": "Educação",
+    "tipo": "Estado",
+    "descricao": "SILVIO"
+  },
+  {
+    "cityId": "londrina",
+    "cityName": "Londrina",
+    "ano": 2025,
+    "valor": 3000.0,
+    "area": "Educação",
+    "tipo": "Impositiva - Individual",
+    "descricao": "COMO VAI"
+  },
+  {
+    "cityId": "maringa",
+    "cityName": "Maringá",
+    "ano": 2020,
+    "valor": 10000.0,
+    "area": "Saúde",
+    "tipo": "Impositiva - Individual",
+    "descricao": "EU"
+  },
+  {
+    "cityId": "maringa",
+    "cityName": "Maringá",
+    "ano": 2021,
+    "valor": 9000.0,
+    "area": "Saúde",
+    "tipo": "Bancada",
+    "descricao": "QUERO"
+  },
+  {
+    "cityId": "maringa",
+    "cityName": "Maringá",
+    "ano": 2023,
+    "valor": 8500.0,
+    "area": "Educação",
+    "tipo": "Bancada",
+    "descricao": "SABER"
+  },
+  {
+    "cityId": "maringa",
+    "cityName": "Maringá",
+    "ano": 2024,
+    "valor": 12500.0,
+    "area": "Educação",
+    "tipo": "Estado",
+    "descricao": "DE"
+  },
+  {
+    "cityId": "maringa",
+    "cityName": "Maringá",
+    "ano": 2025,
+    "valor": 15000.0,
+    "area": "Infraestrutura",
+    "tipo": "Impositiva - Individual",
+    "descricao": "TUDO"
+  }
+]

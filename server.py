@@ -38,6 +38,7 @@ class ChatRequest(BaseModel):
     city_context: Optional[str] = None
     mayor_context: Optional[str] = None
     site_stats: Optional[str] = None
+    investment_context: Optional[str] = None
 
 # --- Novos Modelos ---
 class LoginRequest(BaseModel):
@@ -74,6 +75,26 @@ if os.path.exists("campaign_data.json"):
             CAMPAIGN_DATA = json.load(f)
     except:
         CAMPAIGN_DATA = {}
+
+# --- Gerenciamento de Dados de Investimentos ---
+INVESTMENTS_DATA = []
+
+def save_investments_data():
+    try:
+        with open("investments_data.json", "w", encoding="utf-8") as f:
+            json.dump(INVESTMENTS_DATA, f, indent=2, ensure_ascii=False)
+        print(f"Investimentos salvos: {len(INVESTMENTS_DATA)} registros")
+    except Exception as e:
+        print(f"Erro ao salvar investimentos: {e}")
+
+# Carrega na inicialização
+if os.path.exists("investments_data.json"):
+    try:
+        with open("investments_data.json", "r", encoding="utf-8") as f:
+            INVESTMENTS_DATA = json.load(f)
+        print(f"Investimentos carregados: {len(INVESTMENTS_DATA)} registros")
+    except:
+        INVESTMENTS_DATA = []
 
 # --- Dados Globais (Carregados na inialização) ---
 CITIES_DATA = {}
@@ -212,6 +233,33 @@ async def update_campaign_bulk(data: CampaignBulkUpdate):
     
     save_campaign_data()
     return {"success": True, "updates": count}
+
+# --- Endpoints de Investimentos ---
+
+class InvestmentItem(BaseModel):
+    cityId: str
+    cityName: str
+    ano: int
+    valor: float
+    area: Optional[str] = ""
+    tipo: Optional[str] = ""
+    descricao: Optional[str] = ""
+
+class InvestmentsUpdate(BaseModel):
+    investments: List[InvestmentItem]
+
+@app.get("/api/investments/data")
+async def get_investments_data():
+    """Retorna todos os investimentos salvos."""
+    return {"investments": INVESTMENTS_DATA, "count": len(INVESTMENTS_DATA)}
+
+@app.post("/api/investments/save")
+async def save_investments(data: InvestmentsUpdate):
+    """Salva/sobrescreve todos os investimentos."""
+    global INVESTMENTS_DATA
+    INVESTMENTS_DATA = [inv.dict() for inv in data.investments]
+    save_investments_data()
+    return {"success": True, "count": len(INVESTMENTS_DATA)}
 
 # --- Exportação Excel (Backend) ---
 class ExportItem(BaseModel):
@@ -568,18 +616,27 @@ async def chat_endpoint(request: ChatRequest):
                 search_context += f"- {res['title']}: {res['body']} (Link: {res['href']})\n"
                 # sources.append({"title": res['title'], "url": res['href']}) # Desabilitado conforme solicitado
 
-    # 4. Prompt System
+    # 4. Investment Context
+    investment_analysis = request.investment_context or ""
+    
+    # 5. Prompt System
     system_prompt = f"""
-    Você é um Estrategista de Marketing Político de elite.
+    Você é um Estrategista de Marketing Político e Analista de Investimentos Públicos de elite.
     
     OBJETIVO:
-    Analisar os dados de campanha e demográficos para responder às perguntas do usuário com insights de alto nível.
+    Analisar os dados de campanha, demográficos E DE INVESTIMENTOS/EMENDAS para responder às perguntas do usuário com insights de alto nível.
     
     INSTRUÇÕES:
     1. **Análise de Eficiência**: Sempre que possível, avalie a eficiência do gasto. Custo/Voto baixo é bom. Conversão alta é ótima.
-    2. **Insights Demográficos**: Use os dados de "Faixa Etária Principal" e "Porcentagem de Mulheres" para sugerir como conversar com o eleitorado dessas cidades (ex: se o público é mais velho, sugira pautas de saúde/segurança; se jovem, educação/emprego).
-    3. **Melhores Cidades**: Se perguntado sobre "onde investir", cruze o 'Custo/Voto' (barato) com a 'Conversão' (alta). Cidades com muitos eleitores e pouco investimento atual são minas de ouro.
-    4. **Tom de Voz**: Profissional, analítico, mas direto. Use bullet points para facilitar a leitura.
+    2. **Insights Demográficos**: Use os dados de "Faixa Etária Principal" e "Porcentagem de Mulheres" para sugerir como conversar com o eleitorado dessas cidades.
+    3. **Melhores Cidades**: Se perguntado sobre "onde investir", cruze o 'Custo/Voto' com a 'Conversão'. Cidades com muitos eleitores e pouco investimento atual são minas de ouro.
+    4. **Análise de Investimentos/Emendas**: Quando perguntado sobre investimentos, emendas, projetos ou recursos:
+       - Use os dados de INVESTIMENTOS IMPORTADOS para responder
+       - Identifique tendências de crescimento ou redução ao longo dos anos
+       - Analise a distribuição por ÁREA (Saúde, Educação, Infraestrutura, etc.) e TIPO (Bancada, Impositiva, Estado, etc.)
+       - Compare investimentos entre cidades
+       - Sugira oportunidades baseadas nos dados
+    5. **Tom de Voz**: Profissional, analítico, mas direto. Use bullet points e tabelas markdown para facilitar a leitura.
     
     CONTEXTO DISPONÍVEL:
     [CIDADE SELECIONADA: {city_name}]
@@ -588,11 +645,15 @@ async def chat_endpoint(request: ChatRequest):
     [ANÁLISE ESTRATÉGICA E DEMOGRÁFICA (GLOBAL/COMPARATIVA)]
     {db_analysis_context}
     
+    [DADOS DE INVESTIMENTOS/EMENDAS PARLAMENTARES]
+    {investment_analysis}
+    
     [RESULTADOS DE BUSCA COMPLEMENTAR]
     {search_context}
     
     ---
     Responda em markdown. Seja o consultor que o político precisa para vencer.
+    Se perguntado sobre investimentos e não houver dados, informe que nenhum dado de investimento foi importado ainda.
     """
 
     try:

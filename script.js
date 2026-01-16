@@ -1057,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <li style="padding:6px 0; border-bottom:1px solid var(--border-color, #f0f0f0); cursor:pointer; transition:background 0.2s; color:var(--text-primary, #333);" 
                         onmouseover="this.style.background='var(--bg-secondary, #f9fafb)'; this.style.color='var(--accent-color, #2563eb)'" 
                         onmouseout="this.style.background='transparent'; this.style.color='var(--text-primary, #333)'"
-                        onclick="document.getElementById('city-search').value='${c.nome}'; document.getElementById('search-btn').click();">
+                        onclick="document.getElementById('city-search').value='${c.nome}'; document.getElementById('city-search').dispatchEvent(new Event('change'));">
                         ${c.nome}
                     </li>
                 `).join('')}
@@ -1566,14 +1566,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         const perform = () => {
-            const val = citySearch.value.toLowerCase();
+            const val = citySearch.value.toLowerCase().trim();
+            if (!val) return;
             const id = Object.keys(citiesData).find(key => citiesData[key].nome.toLowerCase() === val);
-            if (id) selectCity(id);
-            else alert('Cidade não encontrada.');
+            if (id) {
+                selectCity(id);
+                citySearch.blur(); // Remove focus
+            } else {
+                alert('Cidade não encontrada.');
+            }
         };
 
-        document.getElementById('search-btn').addEventListener('click', perform);
-        citySearch.addEventListener('keypress', (e) => { if (e.key === 'Enter') perform(); });
+        // Search on Enter key
+        citySearch.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                perform();
+            }
+        });
+
+        // Also search when selecting from datalist
+        citySearch.addEventListener('change', () => {
+            perform();
+        });
     }
 
     function setupZoomPan() {
@@ -1713,7 +1728,102 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cityContext = "Paraná (Estado Geral)";
             }
 
-            // 3. Show loading bubble
+            // 3. Build Investment Analytics Context
+            let investmentContext = null;
+            if (typeof investmentsData !== 'undefined' && investmentsData.length > 0) {
+                // Global stats
+                const totalInvestido = investmentsData.reduce((sum, i) => sum + i.valor, 0);
+                const totalInvestimentos = investmentsData.length;
+                const cidadesBeneficiadas = new Set(investmentsData.map(i => i.cityId)).size;
+                const mediaInvestimento = totalInvestimentos > 0 ? totalInvestido / totalInvestimentos : 0;
+
+                // Por ano
+                const byYear = {};
+                investmentsData.forEach(inv => {
+                    byYear[inv.ano] = (byYear[inv.ano] || 0) + inv.valor;
+                });
+                const evoluçãoAnual = Object.entries(byYear)
+                    .sort((a, b) => a[0] - b[0])
+                    .map(([ano, val]) => `${ano}: R$ ${val.toLocaleString('pt-BR')}`);
+
+                // Por área
+                const byArea = {};
+                investmentsData.forEach(inv => {
+                    const area = inv.area || 'Sem área';
+                    byArea[area] = (byArea[area] || 0) + inv.valor;
+                });
+                const porArea = Object.entries(byArea)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5)
+                    .map(([area, val]) => `${area}: R$ ${val.toLocaleString('pt-BR')}`);
+
+                // Por tipo
+                const byTipo = {};
+                investmentsData.forEach(inv => {
+                    const tipo = inv.tipo || 'Sem tipo';
+                    byTipo[tipo] = (byTipo[tipo] || 0) + inv.valor;
+                });
+                const porTipo = Object.entries(byTipo)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([tipo, val]) => `${tipo}: R$ ${val.toLocaleString('pt-BR')}`);
+
+                // Top 10 cidades
+                const byCity = {};
+                investmentsData.forEach(inv => {
+                    if (!byCity[inv.cityId]) {
+                        byCity[inv.cityId] = { nome: inv.cityName, total: 0, count: 0, areas: [] };
+                    }
+                    byCity[inv.cityId].total += inv.valor;
+                    byCity[inv.cityId].count++;
+                    if (!byCity[inv.cityId].areas.includes(inv.area)) {
+                        byCity[inv.cityId].areas.push(inv.area);
+                    }
+                });
+                const topCidades = Object.values(byCity)
+                    .sort((a, b) => b.total - a.total)
+                    .slice(0, 10)
+                    .map(c => `${c.nome}: R$ ${c.total.toLocaleString('pt-BR')} (${c.count} investimentos, áreas: ${c.areas.slice(0, 3).join(', ')})`);
+
+                // Investimentos da cidade selecionada
+                let cityInvestments = null;
+                if (activeCityId) {
+                    const cityInvs = investmentsData.filter(i => i.cityId === activeCityId);
+                    if (cityInvs.length > 0) {
+                        const cityTotal = cityInvs.reduce((sum, i) => sum + i.valor, 0);
+                        cityInvestments = `\nINVESTIMENTOS NESTA CIDADE (${cityInvs[0].cityName}):\n`;
+                        cityInvestments += `- Total: R$ ${cityTotal.toLocaleString('pt-BR')} em ${cityInvs.length} investimentos\n`;
+                        cityInvestments += `- Detalhes:\n`;
+                        cityInvs.sort((a, b) => b.ano - a.ano).forEach(inv => {
+                            cityInvestments += `  • ${inv.ano}: R$ ${inv.valor.toLocaleString('pt-BR')} - ${inv.area || 'Sem área'} (${inv.tipo || 'Sem tipo'})${inv.descricao ? ': ' + inv.descricao : ''}\n`;
+                        });
+                    }
+                }
+
+                investmentContext = `
+DADOS DE INVESTIMENTOS IMPORTADOS (EMENDAS/PROJETOS):
+=====================================
+RESUMO GLOBAL:
+- Total Investido: R$ ${totalInvestido.toLocaleString('pt-BR')}
+- Número de Investimentos: ${totalInvestimentos}
+- Cidades Beneficiadas: ${cidadesBeneficiadas}
+- Média por Investimento: R$ ${mediaInvestimento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+
+EVOLUÇÃO ANUAL:
+${evoluçãoAnual.join('\n')}
+
+DISTRIBUIÇÃO POR ÁREA (TOP 5):
+${porArea.join('\n')}
+
+DISTRIBUIÇÃO POR TIPO:
+${porTipo.join('\n')}
+
+TOP 10 CIDADES COM MAIOR INVESTIMENTO:
+${topCidades.join('\n')}
+${cityInvestments || ''}
+`;
+            }
+
+            // 4. Show loading bubble
             const loadingId = appendLoading();
 
             try {
@@ -1725,7 +1835,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         message: text,
                         city_context: cityContext,
                         mayor_context: mayorContext,
-                        site_stats: siteStats
+                        site_stats: siteStats,
+                        investment_context: investmentContext
                     })
                 });
 
@@ -2254,5 +2365,622 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Auto-init listeners immediately (DOM is ready)
     initAdminListeners();
+
+    // ============================================
+    // INVESTMENT MANAGEMENT SYSTEM
+    // ============================================
+
+    let investmentsData = []; // Array of all investment records
+    let globalChartEvolucao = null;
+    let globalChartArea = null;
+    let globalChartTipo = null;
+    let cityChartInv = null;
+
+    // Load investments from server on startup
+    async function loadInvestmentsFromServer() {
+        try {
+            const response = await fetch('/api/investments/data');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.investments && data.investments.length > 0) {
+                    investmentsData = data.investments;
+                    console.log(`Investimentos carregados: ${investmentsData.length}`);
+                    populateInvestmentFilters();
+                }
+            }
+        } catch (error) {
+            console.log('Servidor não disponível para carregar investimentos');
+        }
+    }
+
+    // Save investments to server
+    async function saveInvestmentsToServer() {
+        try {
+            const response = await fetch('/api/investments/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ investments: investmentsData })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`Investimentos salvos no servidor: ${data.count}`);
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao salvar investimentos no servidor:', error);
+        }
+        return false;
+    }
+
+    // Load investments on init
+    loadInvestmentsFromServer();
+
+    // Initialize investment import button
+    function initInvestmentImport() {
+        const btnImportInv = document.getElementById('btn-import-investments');
+        const fileInputInv = document.getElementById('file-import-investments');
+        const modalInv = document.getElementById('import-investments-modal');
+        const closeInv = document.getElementById('close-import-investments');
+        const confirmInv = document.getElementById('btn-confirm-import-investments');
+
+        if (btnImportInv) {
+            btnImportInv.addEventListener('click', () => {
+                if (modalInv) modalInv.classList.remove('hidden');
+            });
+        }
+
+        if (closeInv) {
+            closeInv.addEventListener('click', () => {
+                modalInv.classList.add('hidden');
+            });
+        }
+
+        if (confirmInv) {
+            confirmInv.addEventListener('click', () => {
+                if (fileInputInv) {
+                    fileInputInv.value = "";
+                    fileInputInv.click();
+                }
+                modalInv.classList.add('hidden');
+            });
+        }
+
+        if (fileInputInv) {
+            fileInputInv.addEventListener('change', handleInvestmentExcelImport);
+        }
+    }
+
+    // Handle investment Excel import
+    async function handleInvestmentExcelImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+            if (rows.length === 0) {
+                alert('❌ ERRO: Planilha vazia!\n\nNenhum dado encontrado na planilha.');
+                return;
+            }
+
+            // Check required columns in first row
+            const firstRow = rows[0];
+            const columnKeys = Object.keys(firstRow);
+
+            // Helper to find column (case insensitive, accent insensitive)
+            const normalizeStr = (s) => s.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const findColumn = (names) => {
+                for (const name of names) {
+                    const found = columnKeys.find(k => normalizeStr(k).includes(normalizeStr(name)));
+                    if (found) return found;
+                }
+                return null;
+            };
+
+            // Map columns
+            const colCidade = findColumn(['cidade']);
+            const colAno = findColumn(['ano']);
+            const colValor = findColumn(['valor']);
+            const colArea = findColumn(['area', 'área']);
+            const colTipo = findColumn(['tipo']);
+            const colDesc = findColumn(['descri', 'descrição', 'descricao']);
+
+            // Validate required columns
+            const missingCols = [];
+            if (!colCidade) missingCols.push('CIDADE');
+            if (!colAno) missingCols.push('ANO');
+            if (!colValor) missingCols.push('VALOR INDICADO');
+
+            if (missingCols.length > 0) {
+                alert(`❌ ERRO: Colunas obrigatórias não encontradas!\n\nColunas faltando: ${missingCols.join(', ')}\n\nColunas encontradas na planilha:\n${columnKeys.join(', ')}\n\nVerifique se a primeira linha da planilha contém os cabeçalhos corretos.`);
+                return;
+            }
+
+            // Parse Brazilian number format (1.000,00 -> 1000.00)
+            const parseBrazilianNumber = (val) => {
+                if (typeof val === 'number') return val;
+                if (!val) return 0;
+                let str = val.toString().trim();
+                // Remove thousand separators (.)
+                str = str.replace(/\./g, '');
+                // Replace decimal comma with dot
+                str = str.replace(',', '.');
+                return parseFloat(str) || 0;
+            };
+
+            // Clear existing data (overwrite mode)
+            const newInvestments = [];
+
+            // Parse investments
+            let imported = 0;
+            let notFound = [];
+            let invalidRows = [];
+            let rowNum = 1; // Start from 1 (header is 0)
+
+            rows.forEach(row => {
+                rowNum++;
+
+                const cityName = (row[colCidade] || '').toString().trim();
+                const anoRaw = row[colAno];
+                const valorRaw = row[colValor];
+                const area = colArea ? (row[colArea] || '').toString().trim() : '';
+                const tipo = colTipo ? (row[colTipo] || '').toString().trim() : '';
+                const descricao = colDesc ? (row[colDesc] || '').toString().trim() : '';
+
+                // Skip empty rows
+                if (!cityName && !anoRaw && !valorRaw) return;
+
+                // Validate row
+                const ano = parseInt(anoRaw) || 0;
+                const valor = parseBrazilianNumber(valorRaw);
+
+                if (!cityName) {
+                    invalidRows.push(`Linha ${rowNum}: Nome da cidade vazio`);
+                    return;
+                }
+                if (!ano || ano < 1900 || ano > 2100) {
+                    invalidRows.push(`Linha ${rowNum} (${cityName}): Ano inválido "${anoRaw}"`);
+                    return;
+                }
+                if (!valor || valor <= 0) {
+                    invalidRows.push(`Linha ${rowNum} (${cityName}): Valor inválido "${valorRaw}"`);
+                    return;
+                }
+
+                // Find city by name (case insensitive, accent tolerant)
+                const cityId = Object.keys(citiesData).find(id => {
+                    const nomeCidade = citiesData[id].nome || '';
+                    return normalizeStr(nomeCidade) === normalizeStr(cityName);
+                });
+
+                if (cityId) {
+                    newInvestments.push({
+                        cityId,
+                        cityName: citiesData[cityId].nome,
+                        ano,
+                        valor,
+                        area,
+                        tipo,
+                        descricao
+                    });
+                    imported++;
+                } else {
+                    if (!notFound.includes(cityName)) notFound.push(cityName);
+                }
+            });
+
+            // Build result message
+            let message = '';
+
+            if (imported > 0) {
+                message += `✅ SUCESSO!\n\n${imported} investimentos importados com sucesso.\n`;
+                message += `(Os dados anteriores foram sobrescritos)\n`;
+            } else {
+                message += `⚠️ ATENÇÃO!\n\nNenhum investimento foi importado.\n`;
+            }
+
+            if (notFound.length > 0) {
+                message += `\n📍 Cidades não encontradas (${notFound.length}):\n${notFound.slice(0, 10).join(', ')}${notFound.length > 10 ? '...' : ''}\n`;
+            }
+
+            if (invalidRows.length > 0) {
+                message += `\n❌ Linhas com erro (${invalidRows.length}):\n${invalidRows.slice(0, 5).join('\n')}${invalidRows.length > 5 ? '\n...' : ''}\n`;
+            }
+
+            // Replace existing data with new data (overwrite)
+            if (imported > 0) {
+                investmentsData = newInvestments;
+
+                // Save to server
+                const saved = await saveInvestmentsToServer();
+                if (saved) {
+                    message += `\n💾 Dados salvos no servidor com sucesso!`;
+                } else {
+                    message += `\n⚠️ Não foi possível salvar no servidor (dados mantidos localmente)`;
+                }
+
+                // Populate filters with unique values
+                populateInvestmentFilters();
+
+                // Update current city view if open
+                if (activeCityId) {
+                    updateCityInvestments(activeCityId);
+                }
+            }
+
+            alert(message);
+
+        } catch (error) {
+            console.error('Erro ao importar investimentos:', error);
+            alert(`❌ ERRO AO LER ARQUIVO!\n\n${error.message}\n\nVerifique se o arquivo é um Excel válido (.xlsx ou .xls).`);
+        }
+    }
+
+    // Populate filter dropdowns with unique values
+    function populateInvestmentFilters() {
+        const anos = [...new Set(investmentsData.map(i => i.ano))].sort((a, b) => b - a);
+        const areas = [...new Set(investmentsData.map(i => i.area).filter(a => a))].sort();
+        const tipos = [...new Set(investmentsData.map(i => i.tipo).filter(t => t))].sort();
+
+        // Global filters
+        populateSelect('filter-global-ano', anos, 'Todos os Anos');
+        populateSelect('filter-global-area', areas, 'Todas as Áreas');
+        populateSelect('filter-global-tipo', tipos, 'Todos os Tipos');
+
+        // City filters
+        populateSelect('filter-inv-ano-cidade', anos, 'Todos os Anos');
+        populateSelect('filter-inv-area-cidade', areas, 'Todas as Áreas');
+        populateSelect('filter-inv-tipo-cidade', tipos, 'Todos os Tipos');
+    }
+
+    function populateSelect(selectId, options, defaultText) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+
+        select.innerHTML = `<option value="all">${defaultText}</option>`;
+        options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            select.appendChild(option);
+        });
+    }
+
+    // Update city investments tab
+    function updateCityInvestments(cityId) {
+        const cityInvestments = investmentsData.filter(i => i.cityId === cityId);
+
+        // Get filter values
+        const filterAno = document.getElementById('filter-inv-ano-cidade')?.value || 'all';
+        const filterArea = document.getElementById('filter-inv-area-cidade')?.value || 'all';
+        const filterTipo = document.getElementById('filter-inv-tipo-cidade')?.value || 'all';
+
+        // Apply filters
+        let filtered = cityInvestments;
+        if (filterAno !== 'all') filtered = filtered.filter(i => i.ano == filterAno);
+        if (filterArea !== 'all') filtered = filtered.filter(i => i.area === filterArea);
+        if (filterTipo !== 'all') filtered = filtered.filter(i => i.tipo === filterTipo);
+
+        // Update totals
+        const total = filtered.reduce((sum, i) => sum + i.valor, 0);
+        const count = filtered.length;
+
+        document.getElementById('inv-total-cidade').textContent = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('inv-count-cidade').textContent = count;
+
+        // Update list
+        const listContainer = document.getElementById('inv-list-cidade');
+        if (listContainer) {
+            if (filtered.length === 0) {
+                listContainer.innerHTML = '<p class="no-data">Nenhum investimento registrado para esta cidade.</p>';
+            } else {
+                listContainer.innerHTML = filtered.sort((a, b) => b.ano - a.ano).map(inv => `
+                    <div class="inv-item">
+                        <div class="inv-item-header">
+                            <span class="inv-item-year">${inv.ano}</span>
+                            <span class="inv-item-value">R$ ${inv.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div class="inv-item-area">${inv.area || 'Sem área'}</div>
+                        <div class="inv-item-tipo">${inv.tipo || 'Sem tipo'}</div>
+                        ${inv.descricao ? `<div class="inv-item-desc">${inv.descricao}</div>` : ''}
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Update chart
+        updateCityInvestmentChart(filtered);
+    }
+
+    // City investment chart
+    function updateCityInvestmentChart(investments) {
+        const canvas = document.getElementById('chart-inv-cidade');
+        if (!canvas) return;
+
+        // Group by year
+        const byYear = {};
+        investments.forEach(inv => {
+            byYear[inv.ano] = (byYear[inv.ano] || 0) + inv.valor;
+        });
+
+        const years = Object.keys(byYear).sort();
+        const values = years.map(y => byYear[y]);
+
+        if (cityChartInv) cityChartInv.destroy();
+
+        cityChartInv = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: years,
+                datasets: [{
+                    label: 'Investimento (R$)',
+                    data: values,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: v => 'R$ ' + v.toLocaleString('pt-BR')
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize Analytics Modal
+    function initAnalyticsModal() {
+        const btnAnalytics = document.getElementById('btn-analytics');
+        const modal = document.getElementById('analytics-modal');
+        const closeBtn = document.getElementById('close-analytics');
+        const applyBtn = document.getElementById('btn-apply-filters');
+
+        if (btnAnalytics) {
+            btnAnalytics.addEventListener('click', () => {
+                modal.classList.remove('hidden');
+                updateAnalyticsDashboard();
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+        }
+
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                updateAnalyticsDashboard();
+            });
+        }
+
+        // Close on outside click
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            });
+        }
+    }
+
+    // Update Analytics Dashboard
+    function updateAnalyticsDashboard() {
+        const filterAno = document.getElementById('filter-global-ano')?.value || 'all';
+        const filterArea = document.getElementById('filter-global-area')?.value || 'all';
+        const filterTipo = document.getElementById('filter-global-tipo')?.value || 'all';
+
+        // Apply filters
+        let filtered = investmentsData;
+        if (filterAno !== 'all') filtered = filtered.filter(i => i.ano == filterAno);
+        if (filterArea !== 'all') filtered = filtered.filter(i => i.area === filterArea);
+        if (filterTipo !== 'all') filtered = filtered.filter(i => i.tipo === filterTipo);
+
+        // Update KPIs
+        const total = filtered.reduce((sum, i) => sum + i.valor, 0);
+        const count = filtered.length;
+        const cities = new Set(filtered.map(i => i.cityId)).size;
+        const avg = count > 0 ? total / count : 0;
+
+        document.getElementById('kpi-total').textContent = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('kpi-count').textContent = count;
+        document.getElementById('kpi-cities').textContent = cities;
+        document.getElementById('kpi-avg').textContent = `R$ ${avg.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+        // Update charts
+        updateGlobalCharts(filtered);
+
+        // Update top cities table
+        updateTopCitiesTable(filtered);
+    }
+
+    // Update global charts
+    function updateGlobalCharts(investments) {
+        // Evolution chart
+        const byYear = {};
+        investments.forEach(inv => {
+            byYear[inv.ano] = (byYear[inv.ano] || 0) + inv.valor;
+        });
+        const years = Object.keys(byYear).sort();
+        const yearValues = years.map(y => byYear[y]);
+
+        const canvasEvo = document.getElementById('chart-global-evolucao');
+        if (canvasEvo) {
+            if (globalChartEvolucao) globalChartEvolucao.destroy();
+            globalChartEvolucao = new Chart(canvasEvo, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Investimento Total (R$)',
+                        data: yearValues,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#2563eb'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: v => 'R$ ' + (v / 1000).toFixed(0) + 'k'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Area distribution chart
+        const byArea = {};
+        investments.forEach(inv => {
+            const area = inv.area || 'Sem área';
+            byArea[area] = (byArea[area] || 0) + inv.valor;
+        });
+        const areas = Object.keys(byArea);
+        const areaValues = areas.map(a => byArea[a]);
+        const areaColors = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#64748b'];
+
+        const canvasArea = document.getElementById('chart-global-area');
+        if (canvasArea) {
+            if (globalChartArea) globalChartArea.destroy();
+            globalChartArea = new Chart(canvasArea, {
+                type: 'doughnut',
+                data: {
+                    labels: areas,
+                    datasets: [{
+                        data: areaValues,
+                        backgroundColor: areaColors.slice(0, areas.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Type distribution chart
+        const byTipo = {};
+        investments.forEach(inv => {
+            const tipo = inv.tipo || 'Sem tipo';
+            byTipo[tipo] = (byTipo[tipo] || 0) + inv.valor;
+        });
+        const tipos = Object.keys(byTipo);
+        const tipoValues = tipos.map(t => byTipo[t]);
+
+        const canvasTipo = document.getElementById('chart-global-tipo');
+        if (canvasTipo) {
+            if (globalChartTipo) globalChartTipo.destroy();
+            globalChartTipo = new Chart(canvasTipo, {
+                type: 'bar',
+                data: {
+                    labels: tipos,
+                    datasets: [{
+                        label: 'Total (R$)',
+                        data: tipoValues,
+                        backgroundColor: '#7c3aed'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: v => 'R$ ' + (v / 1000).toFixed(0) + 'k'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Update top cities table
+    function updateTopCitiesTable(investments) {
+        const byCity = {};
+        investments.forEach(inv => {
+            if (!byCity[inv.cityId]) {
+                byCity[inv.cityId] = { name: inv.cityName, total: 0, count: 0, areas: {} };
+            }
+            byCity[inv.cityId].total += inv.valor;
+            byCity[inv.cityId].count++;
+            byCity[inv.cityId].areas[inv.area || 'Sem área'] = true;
+        });
+
+        const sorted = Object.values(byCity).sort((a, b) => b.total - a.total).slice(0, 10);
+
+        const tbody = document.querySelector('#table-top-cities tbody');
+        if (tbody) {
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum dado disponível</td></tr>';
+            } else {
+                tbody.innerHTML = sorted.map(city => `
+                    <tr>
+                        <td><strong>${city.name}</strong></td>
+                        <td>R$ ${city.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td>${city.count}</td>
+                        <td>${Object.keys(city.areas).slice(0, 3).join(', ')}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+    }
+
+    // Add filter listeners for city investments
+    function initCityInvestmentFilters() {
+        ['filter-inv-ano-cidade', 'filter-inv-area-cidade', 'filter-inv-tipo-cidade'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => {
+                    if (activeCityId) updateCityInvestments(activeCityId);
+                });
+            }
+        });
+    }
+
+    // Modified selectCity to also update investments
+    const originalSelectCity = selectCity;
+    selectCity = function (id) {
+        originalSelectCity(id);
+        updateCityInvestments(id);
+    };
+
+    // Initialize investment system
+    initInvestmentImport();
+    initAnalyticsModal();
+    initCityInvestmentFilters();
 
 }); // End DOMContentLoaded Scope
