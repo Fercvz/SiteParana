@@ -166,6 +166,27 @@ async def login(credentials: LoginRequest):
 async def get_campaign_data():
     return CAMPAIGN_DATA
 
+@app.get("/api/status")
+async def api_status():
+    """Endpoint leve para verificar conectividade do App."""
+    return {"status": "online", "message": "Servidor do Mapa Paraná operando!"}
+
+@app.get("/api/cities")
+async def get_cities_list():
+    """Retorna lista simplificada de cidades para o App (Dropdown/Busca)."""
+    # Retorna lista para facilitar iteração no React Native
+    simple_list = []
+    for slug, data in CITIES_DATA.items():
+        simple_list.append({
+            "id": slug,
+            "nome": data.get("nome"),
+            "habitantes": data.get("habitantes"),
+            "partido": data.get("partido")
+        })
+    # Ordena por nome
+    simple_list.sort(key=lambda x: x["nome"])
+    return simple_list
+
 @app.post("/api/campaign/update")
 async def update_campaign(data: CampaignUpdate):
     slug = data.city_slug
@@ -591,6 +612,15 @@ async def chat_endpoint(request: ChatRequest):
     except Exception as e:
         print(f"Erro OpenAI: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Middleware para desabilitar cache (Desenvolvimento Mobile)
+@app.middleware("http")
+async def add_no_cache_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 # Servir arquivos estáticos (HTML, CSS, JS) na raiz
 app.mount("/", StaticFiles(directory=".", html=True), name="static")

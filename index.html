@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa Interativo do Paraná</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260116d">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -40,102 +40,50 @@
 
         <!-- Login Button Removed (Moved to Header) -->
 
-        <!-- Professional Header -->
         <header class="site-header">
             <div class="brand-container">
                 <h1>Mapa Interativo do Paraná</h1>
-                <p>Explore detalhes demográficos, econômicos e políticos dos 399 municípios.</p>
             </div>
 
             <div class="header-tools">
                 <div class="search-container">
                     <input type="text" id="city-search" placeholder="Buscar cidade..." list="cities-list">
                     <datalist id="cities-list"></datalist>
-                    <button id="search-btn" aria-label="Buscar">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                    </button>
+                    <button id="search-btn" aria-label="Buscar">🔍</button>
                 </div>
+
                 <button id="login-btn" class="login-btn">Entrar</button>
                 <button id="theme-toggle" aria-label="Alternar Tema">🌙</button>
             </div>
         </header>
 
-        <!-- Main Content Area (Layout: Filters | Map | Details) -->
+        <!-- Main Content Area -->
         <div class="main-content">
 
-            <!-- Left Sidebar for Filters & Stats -->
+            <!-- Left Sidebar (Filters) -->
             <aside class="left-sidebar">
-                <div class="sidebar-section state-info">
-                    <h3>Estado do Paraná</h3>
-                    <div class="info-card">
-                        <div class="info-row">
-                            <span>Cidades:</span>
-                            <strong>399</strong>
-                        </div>
-                        <div class="info-row">
-                            <span>Habitantes:</span>
-                            <strong>~11.8 Milhões</strong>
-                        </div>
-                        <div class="info-row">
-                            <span>Governador:</span>
-                            <strong>Ratinho Júnior (PSD)</strong>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="sidebar-section visualization">
                     <h3>Visualização</h3>
                     <div class="filter-group">
-                        <label for="vis-mode">Modo de Mapa</label>
                         <select id="vis-mode">
                             <option value="none">Padrão</option>
                             <option value="party">Partidos Políticos</option>
-                            <option value="heatmap-pop"> Habitantes (Mapa de Calor) </option>
-                            <option value="heatmap-pib"> PIB per capita (Mapa de Calor) </option>
+                            <option value="heatmap-pop"> Habitantes</option>
+                            <option value="heatmap-pib"> PIB per capita</option>
+                            <option value="heatmap-votes"> Campanha: Votos </option>
+                            <option value="heatmap-money"> Campanha: Investimento </option>
                         </select>
-                    </div>
-
-                    <div id="map-legend" class="legend-container hidden">
-                        <!-- Legend items injected by JS -->
                     </div>
                 </div>
 
                 <div class="sidebar-section filters">
-                    <h3>Filtrar Cidades</h3>
+                    <!-- Título removido a pedido do usuário -->
 
-                    <div class="filter-group">
-                        <label for="filter-party">Partido (Prefeito)</label>
-                        <select id="filter-party">
-                            <option value="all">Todos</option>
-                            <option value="PSD">PSD</option>
-                            <option value="PL">PL</option>
-                            <option value="PP">PP</option>
-                            <option value="União Brasil">União Brasil</option>
-                            <option value="Republicanos">Republicanos</option>
-                            <option value="MDB">MDB</option>
-                            <option value="PT">PT</option>
-                            <option value="PDT">PDT</option>
-                            <option value="Podemos">Podemos</option>
-                            <!-- Add other parties dynamically if needed -->
-                        </select>
-                    </div>
-
-                    <div class="filter-group">
-                        <label>Habitantes (mínimo: <span id="val-pop">0</span>)</label>
-                        <input type="range" id="filter-pop" min="0" max="2000000" step="10000" value="0">
-                    </div>
-
-                    <div class="filter-group">
-                        <label>Área (km²) (mínimo: <span id="val-area">0</span>)</label>
-                        <input type="range" id="filter-area" min="0" max="4000" step="100" value="0">
-                    </div>
+                    <!-- Legenda das Visualizações (será populada pelo JS) -->
+                    <div id="sidebar-legend-container" class="legend-box hidden"></div>
 
                     <button id="reset-filters">Limpar Filtros</button>
-                    <p class="filter-note">Cidades destacadas: <strong id="highlight-count">399</strong></p>
                 </div>
             </aside>
 
@@ -146,16 +94,14 @@
                 </div>
                 <!-- SVG will be injected here -->
 
-                <!-- Data Source Note -->
-                <div class="data-source-note">
-                    Informações do site do IBGE e dados eleitorais do STF (dados de 2024)
-                </div>
+                <!-- Data Source Note Removed -->
 
                 <div class="zoom-controls">
                     <button id="zoom-in" aria-label="Zoom In">+</button>
                     <button id="zoom-out" aria-label="Zoom Out">-</button>
                     <button id="zoom-reset" aria-label="Reset Zoom">⟲</button>
                 </div>
+                <div id="map-legend" class="legend-container hidden"></div>
             </main>
 
             <!-- Tooltip -->
@@ -366,21 +312,22 @@
     <!-- Login Modal -->
     <div id="login-modal" class="modal hidden">
         <div class="modal-content">
-            <span id="close-login" class="close-modal">&times;</span>
-            <h2>Acesso Restrito</h2>
+            <div class="modal-header">
+                <h2>Acesso Administrativo</h2>
+                <button id="close-login">×</button>
+            </div>
             <form id="login-form">
                 <div class="input-group">
-                    <label>Usuário:</label>
-                    <input type="text" id="login-user" autocomplete="username">
+                    <label for="login-user">Usuário</label>
+                    <input type="text" id="login-user" required>
                 </div>
                 <div class="input-group">
-                    <label>Senha:</label>
-                    <input type="password" id="login-pass" autocomplete="current-password">
+                    <label for="login-pass">Senha</label>
+                    <input type="password" id="login-pass" required>
                 </div>
-                <!-- type="submit" enables Enter key automatically -->
-                <button type="submit" id="btn-perform-login" class="btn-primary full-width">Entrar</button>
+                <button type="submit" id="btn-perform-login" class="btn-primary">Entrar</button>
+                <p id="login-msg" class="error-msg"></p>
             </form>
-            <p id="login-msg" class="error-msg"></p>
         </div>
     </div>
 
@@ -466,7 +413,7 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260116d"></script>
 </body>
 
 </html>

@@ -26,7 +26,10 @@
     --backdrop-blur: blur(12px);
     --bg-secondary: #f9fafb;
     --bg-hover: #f3f4f6;
+    --bg-hover: #f3f4f6;
     --border-radius: 12px;
+    --map-bg: #e2e8f0;
+    /* Light Slate-200 for map background */
 }
 
 [data-theme="dark"] {
@@ -49,6 +52,8 @@
     --border-color: #334155;
     --highlight-color: #fbbf24;
     --highlight-stroke: #ffffff;
+    --map-bg: #1e293b;
+    /* Darker Slate-800 for map background in dark mode */
 }
 
 * {
@@ -308,30 +313,46 @@ body {
 }
 
 /* --- Left Sidebar (Filters) --- */
+/* --- Left Sidebar (Filters) --- */
 .left-sidebar {
-    width: 300px;
-    min-width: 300px;
+    width: 320px;
+    min-width: 320px;
     background-color: var(--sidebar-bg);
+    /* Glassmorphism supported via variable */
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     z-index: 100;
     overflow-y: auto;
-    padding: 1.5rem;
-    backdrop-filter: var(--backdrop-blur);
+    padding: 2rem 1.5rem;
+    backdrop-filter: blur(15px);
+    /* Stronger blur for modern feel */
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
 }
 
 .sidebar-section {
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
+    animation: fadeIn 0.4s ease-out;
 }
 
 .sidebar-section h3 {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
     color: var(--text-secondary);
-    font-weight: 600;
-    margin-bottom: 1rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-section h3::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+    opacity: 0.5;
 }
 
 .info-card {
@@ -369,22 +390,33 @@ body {
 
 .filter-group label {
     display: block;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--text-primary);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
     font-weight: 500;
 }
 
 .filter-group select {
     width: 100%;
-    padding: 0.6rem;
-    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    border-radius: 10px;
     border: 1px solid var(--border-color);
-    background-color: var(--card-bg);
+    background-color: var(--bg-color);
+    /* Slightly distinct from card */
     color: var(--text-primary);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     cursor: pointer;
     outline: none;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+}
+
+.filter-group select:hover {
+    border-color: var(--text-secondary);
 }
 
 .filter-group select:focus {
@@ -435,10 +467,53 @@ button#reset-filters:hover {
 }
 
 .filter-note {
-    margin-top: 1rem;
-    font-size: 0.8rem;
+    margin: 1rem 0;
+    font-size: 0.85rem;
     color: var(--text-secondary);
     text-align: center;
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+/* Legend Box in Sidebar */
+.legend-box {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.legend-box.hidden {
+    display: none;
+}
+
+.legend-box h4 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.85rem;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.legend-item span {
+    color: var(--text-primary);
 }
 
 /* --- Map Area --- */
@@ -451,7 +526,13 @@ button#reset-filters:hover {
     display: flex;
     justify-content: center;
     align-items: center;
+    transition: background-color 0.5s ease;
 }
+
+/* User requested NO background theme change on visualization */
+/* .map-container.visualizing {
+    background-color: #1e1e2e; 
+} */
 
 .map-container:active {
     cursor: grabbing;
@@ -629,41 +710,184 @@ path.municipio:hover {
     opacity: 1;
 }
 
+/* Botão de toggle escondido no desktop */
+#toggle-filters-btn,
+.sidebar-header-mobile {
+    display: none;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
-    .left-sidebar {
-        display: none;
-        /* Hide filters on tablet/mobile for now to save space */
+    .app-container {
+        height: 100vh;
+        overflow: hidden;
     }
 
+    .main-content {
+        flex-direction: column;
+        /* Stack vertically on mobile */
+    }
+
+    /* Stack main content vertically: Filters on top, Map below */
+    .main-content {
+        flex-direction: column;
+    }
+
+    .left-sidebar {
+        display: flex !important;
+        /* Force flex to override any other state */
+        /* Visible as flex row */
+        width: 100% !important;
+        min-width: 100% !important;
+        height: auto;
+        min-height: 80px;
+        /* Ensure visible height */
+        padding: 0.8rem;
+        background-color: var(--sidebar-bg);
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        overflow-x: auto;
+        /* Horizontal scroll if many items */
+        overflow-y: hidden;
+        flex-direction: row;
+        /* Horizontal layout */
+        align-items: center;
+        gap: 1rem;
+        backdrop-filter: var(--backdrop-blur);
+        z-index: 999;
+        /* High z-index to ensure visibility */
+        transform: none;
+        /* Reset any drawer transform */
+        position: relative;
+        /* Normal flow */
+    }
+
+    .left-sidebar::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .left-sidebar::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 3px;
+    }
+
+    /* Adjust sidebar sections for horizontal bar */
+    .sidebar-section {
+        margin-bottom: 0;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: max-content;
+    }
+
+    .sidebar-section h3 {
+        margin-bottom: 0;
+        margin-right: 0.5rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        display: none;
+        /* Hide titles to save space on mobile? Or show small? Let's hide for compactness as per previous logic */
+    }
+
+    /* Make h3 visible if enough space? No, keep it consistent. */
+
+    .filter-group {
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .filter-group label {
+        display: none;
+        /* Hide labels, placeholder or context is enough usually, or show small */
+    }
+
+    .filter-group select {
+        padding: 0.4rem;
+        font-size: 0.85rem;
+        width: auto;
+        min-width: 130px;
+    }
+
+    /* Reset button compact */
+    button#reset-filters {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+        width: auto;
+        white-space: nowrap;
+    }
+
+    .filter-note {
+        display: none;
+        /* Hide count on mobile to save space */
+    }
+
+    /* Map takes remaining height */
+    .map-container {
+        flex: 1;
+        width: 100%;
+    }
+
+    /* Right Sidebar (City Details) - Bottom Sheet style */
     .sidebar {
         width: 100%;
+        height: 70vh;
+        /* Taller for better view */
         top: auto;
         bottom: 0;
         left: 0;
         right: 0;
-        height: 70%;
         border-radius: 20px 20px 0 0;
         transform: translateY(100%);
+        border-left: none;
+        border-top: 1px solid var(--border-color);
     }
 
     .sidebar.open {
         transform: translateY(0);
     }
 
+    /* Header Adjustments */
     .site-header {
+        height: 60px;
         padding: 0 1rem;
+    }
+
+    .brand-container h1 {
+        font-size: 1rem;
+    }
+
+    .search-container {
+        max-width: 150px;
+        /* Constrain search width */
+    }
+
+    #search-btn {
+        padding: 0.4rem;
+    }
+
+    #toggle-filters-btn {
+        display: none;
+        /* We made filters always visible at top */
     }
 }
 
 /* Legend Styles */
+/* Legend Styles */
 .legend-container {
-    margin-top: 1rem;
-    padding: 0.8rem;
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     font-size: 0.8rem;
+    padding: 10px;
+    box-shadow: var(--shadow-md);
+    z-index: 50;
+    max-width: 250px;
+    backdrop-filter: var(--backdrop-blur);
 }
 
 .legend-container.hidden {
@@ -688,24 +912,25 @@ path.municipio:hover {
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-/* Darker Background for contrast when filtering/dimming */
+/* Darker Background for contrast when filtering/dimming - DISABLED per user request */
+/* User requested light background always
 .map-container.filtering,
 .map-container.visualizing {
     background-color: #0f172a !important;
-    /* Extremely dark blue/slate */
 }
 
 [data-theme="light"] .map-container.filtering,
 [data-theme="light"] .map-container.visualizing {
     background-color: #1e293b !important;
-    /* Dark Slate for light mode too to pop colors */
 }
+*/
 
-/* Dimmed State for Combined Filters */
+/* Dimmed State for Combined Filters - Light Background Compatible */
 path.municipio.dimmed {
-    fill: #334155 !important;
-    fill-opacity: 0.2 !important;
-    stroke-opacity: 0.2;
+    fill: #94a3b8 !important;
+    /* Slate-400 - lighter for contrast on light bg */
+    fill-opacity: 0.3 !important;
+    stroke-opacity: 0.3;
 }
 
 /* High Specificity for Active Selection */

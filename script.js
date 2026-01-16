@@ -1,7 +1,14 @@
+// Debugging Global Errors
+window.onerror = function (msg, url, line, col, error) {
+    alert("Error: " + msg + "\nLine: " + line);
+    return false;
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
-    // DOM Elements
-    const mapContainer = document.getElementById('map-container');
-    const sidebar = document.getElementById('sidebar');
+    // alert("JS Loaded OK"); // Uncomment to verify basic load
+    // DOM Elements - Globals for inner scope
+    let sidebar, mapContainer, svgElement;
+    // Vars initialized later or globally
     const closeSidebarBtn = document.getElementById('close-sidebar');
     const citySearch = document.getElementById('city-search');
     const datalist = document.getElementById('cities-list');
@@ -17,40 +24,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Filters
     const filterParty = document.getElementById('filter-party');
-    const filterPop = document.getElementById('filter-pop');
-    const filterArea = document.getElementById('filter-area');
     const resetFiltersBtn = document.getElementById('reset-filters');
     const highlightCount = document.getElementById('highlight-count');
-    const valPop = document.getElementById('val-pop');
-    const valArea = document.getElementById('val-area');
 
-    // State
-    let svgElement = null;
-    let mapGroup = null;
-    let citiesData = {};
+    // Estado da Aplicação (Login removido/Aberto)
+    // Estado da Aplicação
+    let isLoggedIn = false;
+    let authToken = null;
     let activeCityId = null;
+    let citiesData = {};
+    let campaignData = {};
+    let eleitoradoData = {};
     let filters = {
-        party: 'all',
-        minPop: 0,
-        minArea: 0
+        party: 'all'
     };
     let currentVisMode = 'none';
 
-    // Constants - Partidos com cores únicas e distintas
-    const PARTIES = ['PSD', 'PL', 'PP', 'União Brasil', 'Republicanos', 'MDB', 'PT', 'Podemos', 'PDT', 'PSB', 'PSDB'];
+    // Cores dos Partidos (Oficiais/Aproximadas)
     const PARTY_COLORS = {
-        'PSD': '#1e40af',       // Azul escuro
-        'PL': '#7c3aed',        // Roxo
-        'PP': '#00bcd4',        // Ciano
-        'União Brasil': '#10b981', // Verde esmeralda
-        'Republicanos': '#f97316', // Laranja
-        'MDB': '#ccff00',       // Verde limão bem claro
-        'PT': '#dc2626',        // Vermelho
-        'Podemos': '#ec4899',   // Rosa
-        'PDT': '#9e9e9e',       // Cinza claro
-        'PSB': '#ffff00',       // Amarelo grifa texto
-        'PSDB': '#5d4037'       // Marrom escuro
+        "PSD": "#F59E0B",   // Amarelo/Laranja forte
+        "PP": "#0EA5E9",    // Azul Claro
+        "MDB": "#16A34A",   // Verde
+        "PL": "#172554",    // Azul Marinho Escuro
+        "União Brasil": "#f6ff00fa", // Teal/Turquesa (bem distinto)
+        "PSB": "#CA8A04",   // Dourado/Mostarda (mais visível que amarelo)
+        "Republicanos": "#7C3AED", // Roxo/Violeta (distinto)
+        "PODE": "#84CC16",  // Verde Lima (bem distinto do MDB)
+        "PRD": "#475569",   // Cinza Azulado
+        "NOVO": "#EA580C",  // Laranja
+        "CIDADANIA": "#DB2777", // Rosa/Magenta
+        "SOLIDARIEDADE": "#D97706", // Laranja Queimado
+        "PSDB": "#0470c2ff",  // Azul Médio
+        "PT": "#DC2626",    // Vermelho
+        "PDT": "#771515ff",   // Vermelho Escuro
+        "AVANTE": "#7C3AED", // Roxo (Just in case)
+        "Podemos": "#ed3a9cff",
+        "Outros": "#94A3B8",
+        "Não informado": "#CBD5E1"
     };
+
+    const PARTIES = Object.keys(PARTY_COLORS).filter(k => k !== 'Outros' && k !== 'Não informado');
 
     // Pan/Zoom State
     let scale = 1;
@@ -59,43 +72,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isDragging = false;
     let startX, startY;
 
-    // Check Protocol immediately
-    if (window.location.protocol === 'file:') {
-        mapContainer.innerHTML = `
-            <div style="height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#fef2f2; color:#991b1b; padding:2rem; text-align:center;">
-                <h2 style="font-size:2rem; margin-bottom:1rem;">⚠️ Acesso Bloqueado</h2>
-                <p style="font-size:1.2rem; margin-bottom:2rem; max-width:600px;">
-                    O navegador impede que este mapa carregue seus dados quando aberto diretamente como arquivo.
-                </p>
-                <div style="background:white; padding:2rem; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border:1px solid #fee2e2;">
-                    <p style="margin-bottom:1rem; font-weight:600;">Por favor, use o novo servidor local (Porta 8082):</p>
-                    <a href="http://localhost:8082" 
-                       style="display:inline-block; background:#dc2626; color:white; font-weight:bold; padding:1rem 2rem; border-radius:8px; text-decoration:none; font-size:1.1rem; transition:transform 0.2s;">
-                       🚀 Abrir Mapa (localhost:8082)
-                    </a>
-                </div>
-            </div>
-        `;
-        return; // Stop execution
+    // Check Protocol immediately (Optional, can be relaxed now)
+    if (window.location.protocol === 'file:' && !document.getElementById('mapa-pr')) {
+        // Keep warning only if SVG is MISSING
+        mapContainer.innerHTML = `...`;
+        return;
     }
 
     try {
-        const svgResponse = await fetch('mapa_pr.svg');
-        if (!svgResponse.ok) throw new Error(`Erro SVG: ${svgResponse.status} ${svgResponse.statusText}`);
-        const svgText = await svgResponse.text();
-        const mapSvgLayer = document.getElementById('map-svg-layer');
-        if (mapSvgLayer) {
+        // 1. Get Embedded SVG or Fallback
+        svgElement = document.getElementById('mapa-pr');
+
+        if (!svgElement) {
+            // Fallback: Tenta fetch se não estiver embutido (caso o python falhe)
+            console.log("SVG not found in DOM, fetching...");
+            const svgResponse = await fetch('mapa_pr.svg');
+            if (!svgResponse.ok) throw new Error(`Erro SVG: ${svgResponse.status}`);
+            const svgText = await svgResponse.text();
+
+            const mapSvgLayer = document.getElementById('map-svg-layer') || mapContainer;
             mapSvgLayer.innerHTML = svgText;
-            svgElement = mapSvgLayer.querySelector('svg');
-        } else {
-            // Fallback if index.html desyncs
-            mapContainer.innerHTML = svgText;
-            svgElement = mapContainer.querySelector('svg');
+            svgElement = document.getElementById('mapa-pr');
         }
+
+        if (!svgElement) throw new Error("SVG do mapa não pôde ser carregado.");
+
+        // 2. Setup mapGroup link
         mapGroup = svgElement.querySelector('g') || svgElement;
 
-        const jsonResponse = await fetch('cidades_pr.json');
-        if (!jsonResponse.ok) throw new Error(`Erro JSON: ${jsonResponse.status} ${jsonResponse.statusText}`);
+        // 3. Load Data
+        const jsonResponse = await fetch('cidades_pr.json?v=20260116');
+        if (!jsonResponse.ok) throw new Error(`Erro JSON: ${jsonResponse.status}`);
         citiesData = await jsonResponse.json();
 
         initApp();
@@ -114,29 +121,98 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
     }
 
-    // State - Dados Eleitorais & Campanha
-    let eleitoradoData = {};
-    let campaignData = {}; // Cache local de campanha
+    // State duplicado removido
+    // As variáveis globais já foram declaradas no topo do arquivo.
     let chartInstances = {};
-    let isLoggedIn = false;
-    let authToken = null;
+    // isLoggedIn e authToken já existem.
 
-    function initApp() {
+
+
+    // --- Search Logic ---
+    window.filterCities = function (query) {
+        if (!svgElement) svgElement = document.getElementById('map-svg-layer'); // Ensure valid ref
+
+        if (!query) {
+            // search reset
+            const paths = svgElement.querySelectorAll('path');
+            paths.forEach(p => {
+                p.classList.remove('dimmed', 'highlight-filter');
+                p.style.display = ''; // Show all
+            });
+            if (highlightCount) highlightCount.innerText = "399";
+            return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        let matches = 0;
+        const paths = svgElement.querySelectorAll('path');
+
+        paths.forEach(path => {
+            const city = citiesData[path.id];
+            if (city && city.nome.toLowerCase().includes(lowerQuery)) {
+                path.classList.remove('dimmed');
+                path.classList.add('highlight-filter');
+                path.style.display = '';
+                matches++;
+                if (matches === 1) {
+                    // can zoom to first
+                }
+            } else {
+                path.classList.add('dimmed');
+                path.classList.remove('highlight-filter');
+                // Optional: hide non-matches or just dim? 
+                // path.style.display = 'none'; // Keeping them visible but dimmed is better for context
+            }
+        });
+
+        if (highlightCount) highlightCount.innerText = matches;
+    }
+
+    async function initApp() {
+        // Setup Mobile Toggles
+        setupMobileInteractions();
+
+        // Theme Toggle Fix
+        setupThemeToggle();
+
+        // Initialize Globals
+        sidebar = document.getElementById('sidebar'); // City details sidebar
+        mapContainer = document.getElementById('map-container');
+
         injectMockData(); // Ensure complete data coverage
         initFilters();    // Populate dropdowns and setup ranges
         initMapInteractions();
-        initSearch();
+        initSearch(); // Call improved search init
         setupZoomPan();
         initTabs();       // Sistema de abas
         loadEleitoradoData(); // Carrega dados eleitorais
 
         // Novos Inicializadores de Campanha/Login
         initLogin();
-        loadCampaignGlobalStats();
+        await loadCampaignGlobalStats();
         initDraggableModals();
 
         // Initial Render
         updateMapDisplay();
+    }
+
+    function setupThemeToggle() {
+        const themeBtn = document.getElementById('theme-toggle');
+        if (themeBtn) {
+            // Remove listeners antigos cloning
+            const newBtn = themeBtn.cloneNode(true);
+            themeBtn.parentNode.replaceChild(newBtn, themeBtn);
+
+            newBtn.addEventListener('click', () => {
+                const isDark = document.body.getAttribute('data-theme') === 'dark';
+                document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+                // newBtn.textContent = isDark ? '🌙' : '☀️'; // Opz, ícones podem ser fixos ou mudar
+            });
+        }
+    }
+
+    function setupMobileInteractions() {
+        // Removed for Desktop/Web reversion
     }
 
     // --- Draggable Modals ---
@@ -284,7 +360,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         msg.style.color = "var(--text-secondary)";
 
         try {
-            const res = await fetch('http://localhost:8082/api/login', {
+            const res = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: user, password: pass })
@@ -347,7 +423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function loadCampaignGlobalStats() {
         try {
-            const res = await fetch('http://localhost:8082/api/campaign/data');
+            const res = await fetch('/api/campaign/data');
             if (res.ok) {
                 campaignData = await res.json(); // Atualiza cache
 
@@ -390,7 +466,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const msg = document.getElementById('save-msg');
 
         try {
-            const res = await fetch('http://localhost:8082/api/campaign/update', {
+            const res = await fetch('/api/campaign/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -545,26 +621,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 filterParty.appendChild(opt);
             });
         }
-
-        // Set Ranges
-        let maxPop = 0;
-        let maxArea = 0;
-        Object.values(citiesData).forEach(c => {
-            if (c.habitantes > maxPop) maxPop = c.habitantes;
-            if (c.area_km2 > maxArea) maxArea = c.area_km2;
-        });
-
-        // Add buffer
-        maxPop = Math.ceil(maxPop / 10000) * 10000;
-        maxArea = Math.ceil(maxArea / 100) * 100;
-
-        if (filterPop) {
-            filterPop.max = maxPop;
-            filterPop.step = 1000;
-        }
-        if (filterArea) {
-            filterArea.max = maxArea;
-        }
     }
 
 
@@ -615,8 +671,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 1. Check Filters
             let isMatch = true;
             if (filters.party !== 'all' && city.partido !== filters.party) isMatch = false;
-            if (city.habitantes < filters.minPop) isMatch = false;
-            if (city.area_km2 < filters.minArea) isMatch = false;
 
             // 2. Apply Base Visualization Color
             let fill = '';
@@ -700,10 +754,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (highlightCount) highlightCount.innerText = matchCount;
         updateLegend(minVal, maxVal, (dataField || campaignField), filteredCities);
 
-        if (currentVisMode !== 'none') mapContainer.classList.add('visualizing');
-        else mapContainer.classList.remove('visualizing');
+        if (currentVisMode !== 'none') {
+            mapContainer.classList.add('visualizing');
+            // Force Light Background as requested
+            mapContainer.style.backgroundColor = '#e2e8f0';
+        }
+        else {
+            mapContainer.classList.remove('visualizing');
+            mapContainer.style.backgroundColor = ''; // Revert to CSS default
+        }
+        // Prevent background change (User request #4)
+        // mapContainer.style.backgroundColor = ''; // Reset if needed, or rely on CSS not handling .visualizing for BG anymore
 
-        const hasFilters = filters.party !== 'all' || filters.minPop > 0 || filters.minArea > 0;
+        const hasFilters = filters.party !== 'all';
         if (hasFilters) mapContainer.classList.add('filtering');
         else mapContainer.classList.remove('filtering');
     }
@@ -733,83 +796,141 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateLegend(min, max, dataField, filteredCities = []) {
+        // Find or create legend container in Left Sidebar
+        let leftSidebarLegend = document.getElementById('sidebar-legend-container');
+        if (!leftSidebarLegend) {
+            const sidebar = document.querySelector('.left-sidebar');
+            leftSidebarLegend = document.createElement('div');
+            leftSidebarLegend.id = 'sidebar-legend-container';
+            leftSidebarLegend.className = 'sidebar-section legend-box';
+            sidebar.appendChild(leftSidebarLegend);
+        }
+
+        leftSidebarLegend.innerHTML = '';
+        leftSidebarLegend.classList.add('hidden');
+
+        // Also clear the map-absolute legend just in case (we are moving it)
         legendContainer.innerHTML = '';
         legendContainer.classList.add('hidden');
 
         if (currentVisMode === 'party') {
-            legendContainer.innerHTML = '<strong>Legenda (Partidos)</strong>';
+            leftSidebarLegend.innerHTML = '<h3>Legenda</h3>';
 
             const grid = document.createElement('div');
             grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = '1fr 1fr';
-            grid.style.gap = '5px';
+            grid.style.gridTemplateColumns = '1fr'; // List view usually looks better in sidebar
+            grid.style.gap = '6px';
 
-            Object.keys(PARTY_COLORS).forEach(label => {
-                const color = PARTY_COLORS[label];
+            // Calculate counts per party
+            const partyCounts = {};
+            let missingPartyCount = 0;
+
+            Object.values(citiesData).forEach(city => {
+                const p = city.partido ? city.partido.trim() : null;
+                if (p && p !== 'null' && p !== 'undefined') {
+                    partyCounts[p] = (partyCounts[p] || 0) + 1;
+                } else {
+                    missingPartyCount++;
+                    // console.warn('Missing party for:', city.nome); // Debug
+                }
+            });
+
+            // Filter parties with count > 0 and sort frequencies or alphabetical?
+            // User asked: "Deixe aparecendo somente os partidos políticos que possuem valores"
+            const activeParties = Object.keys(partyCounts).filter(p => partyCounts[p] > 0);
+
+            // Sort by count desc
+            activeParties.sort((a, b) => partyCounts[b] - partyCounts[a]);
+
+            activeParties.forEach(label => {
+                const color = PARTY_COLORS[label] || '#999';
+                const count = partyCounts[label];
+
                 const div = document.createElement('div');
                 div.className = 'legend-item';
-                div.innerHTML = `<div class="legend-color" style="background:${color}"></div><span>${label}</span>`;
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.fontSize = '0.85rem';
+
+                div.innerHTML = `
+                    <div class="legend-color" style="background:${color}; width:12px; height:12px; border-radius:2px; margin-right:8px;"></div>
+                    <span style="flex:1; color:var(--text-primary);">${label}</span>
+                    <span style="font-weight:600; color:var(--text-secondary); margin-left:4px;">${count}</span>
+                `;
                 grid.appendChild(div);
             });
-            legendContainer.appendChild(grid);
-            legendContainer.classList.remove('hidden');
 
-        } else if (dataField) {
+            // Handle cities without party if any (fixing issue #3 visual)
+            if (missingPartyCount > 0) {
+                const div = document.createElement('div');
+                div.className = 'legend-item';
+                div.innerHTML = `<div class="legend-color" style="background:#cbd5e1; width:12px; height:12px; border-radius:2px; margin-right:8px;"></div><span>Sem Partido</span><span style="font-weight:600; margin-left:auto;">${missingPartyCount}</span>`;
+                grid.appendChild(div);
+            }
+
+            leftSidebarLegend.appendChild(grid);
+            leftSidebarLegend.classList.remove('hidden');
+
+        } else if (dataField || currentVisMode.startsWith('heatmap')) {
+            // For Heatmaps, displaying in Sidebar is also cleaner
             let title = '';
             let formatFn;
 
-            if (dataField === 'habitantes') {
-                title = 'Habitantes (Mapa de Calor)';
+            if (currentVisMode === 'heatmap-pop' || dataField === 'habitantes') {
+                title = 'Habitantes';
                 formatFn = (v) => v.toLocaleString('pt-BR');
-            } else if (dataField === 'pib_per_capita') {
-                title = 'PIB per capita (Mapa de Calor)';
+            } else if (currentVisMode === 'heatmap-pib' || dataField === 'pib_per_capita') {
+                title = 'PIB per capita';
                 formatFn = (v) => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            } else if (dataField === 'votes') {
+            } else if (currentVisMode === 'heatmap-votes' || dataField === 'votes') {
                 title = 'Campanha: Total de Votos';
                 formatFn = (v) => Math.round(v).toLocaleString('pt-BR');
-            } else if (dataField === 'money') {
+            } else if (currentVisMode === 'heatmap-money' || dataField === 'money') {
                 title = 'Campanha: Investimento Total';
                 formatFn = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            } else {
+                return; // Unknown mode
             }
 
-            legendContainer.innerHTML = `<strong>${title}</strong>`;
+            leftSidebarLegend.innerHTML = `<h3>${title}</h3>`;
             const div = document.createElement('div');
             div.style.display = 'flex';
             div.style.flexDirection = 'column';
-            div.style.gap = '4px';
+            div.style.gap = '8px';
 
             // Container para a barra com evento
             const barContainer = document.createElement('div');
             barContainer.style.position = 'relative';
+            barContainer.style.height = '16px';
+            barContainer.style.marginBottom = '4px';
+
             const bar = document.createElement('div');
-            bar.style.height = '14px';
+            bar.style.width = '100%';
+            bar.style.height = '100%';
             bar.style.background = 'linear-gradient(to right, #4c1d95, #3b82f6, #06b6d4, #22c55e, #eab308, #f97316, #dc2626, #7f1d1d)';
-            bar.style.borderRadius = '3px';
+            bar.style.borderRadius = '4px';
             bar.style.cursor = 'crosshair';
 
-            // Eventos da régua
+            // Eventos da régua (Tooltip)
             bar.addEventListener('mousemove', (e) => {
                 const rect = bar.getBoundingClientRect();
                 const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
                 const pct = x / rect.width;
 
                 let val = 0;
-                // Reverse calculation (Approximate for Rank-based, exact for Linear)
-                if ((dataField === 'habitantes' || dataField === 'pib_per_capita') && window.mapSortedValues) {
-                    // Rank-based inverse
+                // Reverse calculation Logic
+                if ((currentVisMode === 'heatmap-pop' || currentVisMode === 'heatmap-pib') && window.mapSortedValues) {
                     const idx = Math.floor(pct * (window.mapSortedValues.length - 1));
                     val = window.mapSortedValues[idx];
-                } else if (dataField === 'habitantes' || dataField === 'pib_per_capita') {
-                    // Fallback Log inverse if cache missing
-                    const minLog = Math.log(Math.max(min, 1));
-                    const maxLog = Math.log(Math.max(max, 1));
-                    val = Math.exp(minLog + pct * (maxLog - minLog));
                 } else {
-                    // Linear inverse
                     val = min + pct * (max - min);
+                    if (max > min * 100) {
+                        const minLog = Math.log(Math.max(min, 1));
+                        const maxLog = Math.log(Math.max(max, 1));
+                        val = Math.exp(minLog + pct * (maxLog - minLog));
+                    }
                 }
 
-                // Show tooltip
                 const tooltip = document.getElementById('tooltip');
                 tooltip.style.left = e.pageX + 15 + 'px';
                 tooltip.style.top = e.pageY + 15 + 'px';
@@ -824,32 +945,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             barContainer.appendChild(bar);
             div.appendChild(barContainer);
 
-            div.innerHTML += `
-                <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                    <span>${formatFn(min)}</span>
-                    <span>${formatFn(max)}</span>
-                </div>
-            `;
-
-            // Re-append bar (hacky due to innerHTML overwrite above, let's fix)
-            // Properly append structure
-            div.innerHTML = '';
-            div.appendChild(barContainer);
             const rangeLabels = document.createElement('div');
             rangeLabels.style.display = 'flex';
             rangeLabels.style.justifyContent = 'space-between';
             rangeLabels.style.fontSize = '0.75rem';
+            rangeLabels.style.color = 'var(--text-secondary)';
             rangeLabels.innerHTML = `<span>${formatFn(min)}</span><span>${formatFn(max)}</span>`;
             div.appendChild(rangeLabels);
 
-            legendContainer.appendChild(div);
-            legendContainer.classList.remove('hidden');
+            leftSidebarLegend.appendChild(div);
+            leftSidebarLegend.classList.remove('hidden');
         }
 
-        if (filters.party !== 'all' && filteredCities.length > 0) {
+        // Logic for Filtered Cities List (Show when filtering by party)
+        if (filters.party !== 'all') {
+            // Re-calculate filtered cities if empty (fallback)
+            if (filteredCities.length === 0) {
+                Object.values(citiesData).forEach(city => {
+                    if (city.partido === filters.party) filteredCities.push(city);
+                });
+                filteredCities.sort((a, b) => a.nome.localeCompare(b.nome));
+            }
             updateFilteredCitiesList(filteredCities);
         } else {
-            // Remove a lista se não houver filtro por partido
             const existingList = document.getElementById('filtered-cities-panel');
             if (existingList) existingList.remove();
         }
@@ -900,6 +1018,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!panel) {
             panel = document.createElement('div');
             panel.id = 'filtered-cities-panel';
+            // Styling directly here for robustness, or usually in CSS
+            panel.style.position = 'absolute';
+            panel.style.top = '70px'; // Below header
+            panel.style.left = '320px'; // Right of sidebar
+            panel.style.width = '250px';
+            panel.style.background = 'var(--card-bg, white)';
+            panel.style.border = '1px solid var(--border-color, #ccc)';
+            panel.style.borderRadius = '8px';
+            panel.style.padding = '15px';
+            panel.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            panel.style.zIndex = '900';
+            panel.style.maxHeight = 'calc(100vh - 100px)';
+            panel.style.display = 'flex';
+            panel.style.flexDirection = 'column';
+
+            // Responsive adjust
+            if (window.innerWidth <= 1024) {
+                panel.style.left = '20px';
+                panel.style.width = 'calc(100% - 40px)';
+                panel.style.top = '140px'; // Lower
+            }
+
             document.body.appendChild(panel);
         }
 
@@ -909,8 +1049,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid ${partyColor};">
                 <strong style="font-size:1rem; color:var(--text-primary, #333);">Cidades - ${filters.party}</strong>
                 <span style="background:${partyColor}; color:white; padding:2px 8px; border-radius:12px; font-size:0.85rem;">${cities.length}</span>
+                <button onclick="document.getElementById('filtered-cities-panel').remove()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:var(--text-secondary);">&times;</button>
             </div>
-            <ul style="list-style:none; padding:0; margin:0; font-size:0.9rem;">
+            <div style="max-height: 400px; overflow-y: auto;">
+                <ul style="list-style:none; padding:0; margin:0; font-size:0.9rem;">
                 ${cities.map(c => `
                     <li style="padding:6px 0; border-bottom:1px solid var(--border-color, #f0f0f0); cursor:pointer; transition:background 0.2s; color:var(--text-primary, #333);" 
                         onmouseover="this.style.background='var(--bg-secondary, #f9fafb)'; this.style.color='var(--accent-color, #2563eb)'" 
@@ -919,7 +1061,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${c.nome}
                     </li>
                 `).join('')}
-            </ul>
+                </ul>
+            </div>
         `;
     }
 
@@ -953,31 +1096,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Filters
         const handleFilterChange = () => {
             filters.party = filterParty.value;
-            filters.minPop = parseInt(filterPop.value, 10) || 0;
-            filters.minArea = parseInt(filterArea.value, 10) || 0;
-
-            if (valPop) valPop.innerText = filters.minPop.toLocaleString('pt-BR');
-            if (valArea) valArea.innerText = filters.minArea.toLocaleString('pt-BR');
-
             updateMapDisplay();
         };
 
         if (filterParty) filterParty.addEventListener('change', handleFilterChange);
-        if (filterPop) filterPop.addEventListener('input', handleFilterChange);
-        if (filterArea) filterArea.addEventListener('input', handleFilterChange);
 
         if (resetFiltersBtn) {
             resetFiltersBtn.addEventListener('click', () => {
                 filterParty.value = 'all';
-                filterPop.value = 0;
-                filterArea.value = 0;
                 visModeSelect.value = 'none';
 
-                filters = { party: 'all', minPop: 0, minArea: 0 };
+                filters = { party: 'all' };
                 currentVisMode = 'none';
-
-                if (valPop) valPop.innerText = '0';
-                if (valArea) valArea.innerText = '0';
 
                 updateMapDisplay();
             });
@@ -1588,7 +1718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 // Call Backend
-                const response = await fetch('http://localhost:8082/api/chat', {
+                const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
