@@ -3106,11 +3106,13 @@ ${cityInvestments || ''}
         });
     }
 
-    // Modified selectCity to also update investments
+    // Modified selectCity to also update investments, votos and insights
     const originalSelectCity = selectCity;
     selectCity = function (id) {
         originalSelectCity(id);
         updateCityInvestments(id);
+        updateVotosTab(id);
+        updateInsightsTab(id);
     };
 
     // Initialize investment system
@@ -3390,6 +3392,394 @@ ${cityInvestments || ''}
             }
         });
     });
+
+    // ============================================
+    // INSIGHTS TAB SYSTEM
+    // ============================================
+
+    let chartVotosPorInv = null;
+    let chartDistArea = null;
+    let insightsFilters = {
+        ano: 'all',
+        area: 'all',
+        tipo: 'all'
+    };
+
+    // Initialize Insights Tab
+    function initInsightsTab() {
+        const filterAno = document.getElementById('filter-insights-ano');
+        const filterArea = document.getElementById('filter-insights-area');
+        const filterTipo = document.getElementById('filter-insights-tipo');
+
+        // Populate filters with unique values from investmentsData
+        populateInsightsFilters();
+
+        // Add event listeners
+        if (filterAno) {
+            filterAno.addEventListener('change', () => {
+                insightsFilters.ano = filterAno.value;
+                if (activeCityId) updateInsightsTab(activeCityId);
+            });
+        }
+
+        if (filterArea) {
+            filterArea.addEventListener('change', () => {
+                insightsFilters.area = filterArea.value;
+                if (activeCityId) updateInsightsTab(activeCityId);
+            });
+        }
+
+        if (filterTipo) {
+            filterTipo.addEventListener('change', () => {
+                insightsFilters.tipo = filterTipo.value;
+                if (activeCityId) updateInsightsTab(activeCityId);
+            });
+        }
+    }
+
+    // Populate Insights Filters
+    function populateInsightsFilters() {
+        const anos = [...new Set(investmentsData.map(i => i.ano))].sort((a, b) => b - a);
+        const areas = [...new Set(investmentsData.map(i => i.area).filter(Boolean))].sort();
+        const tipos = [...new Set(investmentsData.map(i => i.tipo).filter(Boolean))].sort();
+
+        const filterAno = document.getElementById('filter-insights-ano');
+        const filterArea = document.getElementById('filter-insights-area');
+        const filterTipo = document.getElementById('filter-insights-tipo');
+
+        if (filterAno) {
+            filterAno.innerHTML = '<option value="all">Todos os Anos</option>';
+            anos.forEach(ano => {
+                filterAno.innerHTML += `<option value="${ano}">${ano}</option>`;
+            });
+        }
+
+        if (filterArea) {
+            filterArea.innerHTML = '<option value="all">Todas as Áreas</option>';
+            areas.forEach(area => {
+                filterArea.innerHTML += `<option value="${area}">${area}</option>`;
+            });
+        }
+
+        if (filterTipo) {
+            filterTipo.innerHTML = '<option value="all">Todos os Tipos</option>';
+            tipos.forEach(tipo => {
+                filterTipo.innerHTML += `<option value="${tipo}">${tipo}</option>`;
+            });
+        }
+    }
+
+    // Main Update Function for Insights Tab
+    function updateInsightsTab(cityId) {
+        const cityData = citiesData[cityId];
+        if (!cityData) return;
+
+        const habitantes = cityData.habitantes || 0;
+
+        // Get city investments with filters applied
+        let cityInvestments = investmentsData.filter(i => i.cityId === cityId);
+
+        if (insightsFilters.ano !== 'all') {
+            cityInvestments = cityInvestments.filter(i => i.ano == insightsFilters.ano);
+        }
+        if (insightsFilters.area !== 'all') {
+            cityInvestments = cityInvestments.filter(i => i.area === insightsFilters.area);
+        }
+        if (insightsFilters.tipo !== 'all') {
+            cityInvestments = cityInvestments.filter(i => i.tipo === insightsFilters.tipo);
+        }
+
+        // Get city votes
+        const cityVotos = votosData[cityId] || [];
+
+        // Calculate totals
+        const totalInvestido = cityInvestments.reduce((sum, i) => sum + (i.valor || 0), 0);
+        const totalVotos = cityVotos.reduce((sum, v) => sum + (v.votos || 0), 0);
+        const invPorHabitante = habitantes > 0 ? totalInvestido / habitantes : 0;
+
+        // Update KPI Cards
+        document.getElementById('kpi-inv-habitante').textContent =
+            `R$ ${invPorHabitante.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpi-total-votos').textContent =
+            totalVotos.toLocaleString('pt-BR');
+        document.getElementById('kpi-total-inv').textContent =
+            `R$ ${totalInvestido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // Update Votos/Investimento por Ano
+        updateEficienciaChart(cityInvestments, cityVotos);
+        updateEficienciaTable(cityInvestments, cityVotos);
+
+        // Update % por Área
+        updateDistribuicaoAreaChart(cityInvestments, totalInvestido);
+        updateAreaTable(cityInvestments, totalInvestido);
+    }
+
+    // Chart: Votos por R$ Investido (por Ano)
+    function updateEficienciaChart(investments, votos) {
+        const canvas = document.getElementById('chart-votos-por-inv');
+        if (!canvas) return;
+
+        // Group investments by year
+        const invByYear = {};
+        investments.forEach(i => {
+            if (!invByYear[i.ano]) invByYear[i.ano] = 0;
+            invByYear[i.ano] += i.valor || 0;
+        });
+
+        // Group votes by year
+        const votosByYear = {};
+        votos.forEach(v => {
+            votosByYear[v.ano] = v.votos || 0;
+        });
+
+        // Find all years that have both data
+        const allYears = [...new Set([...Object.keys(invByYear), ...Object.keys(votosByYear)])]
+            .map(Number)
+            .sort((a, b) => a - b);
+
+        // Calculate efficiency (votos per R$1000)
+        const labels = [];
+        const data = [];
+
+        allYears.forEach(ano => {
+            const inv = invByYear[ano] || 0;
+            const vot = votosByYear[ano] || 0;
+
+            if (inv > 0 || vot > 0) {
+                labels.push(ano.toString());
+                // Votos per R$1000 invested
+                const efficiency = inv > 0 ? (vot / inv) * 1000 : 0;
+                data.push(efficiency);
+            }
+        });
+
+        if (chartVotosPorInv) {
+            chartVotosPorInv.destroy();
+        }
+
+        if (labels.length === 0) {
+            canvas.parentElement.innerHTML = '<p class="no-data" style="padding: 2rem; text-align: center;">Sem dados para calcular eficiência.</p>';
+            return;
+        }
+
+        chartVotosPorInv = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Votos por R$1.000',
+                    data: data,
+                    backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `${context.parsed.y.toFixed(2)} votos/R$1.000`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Votos/R$1.000'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Table: Eficiência por Ano
+    function updateEficienciaTable(investments, votos) {
+        const table = document.getElementById('table-eficiencia-ano');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        // Group by year
+        const invByYear = {};
+        investments.forEach(i => {
+            if (!invByYear[i.ano]) invByYear[i.ano] = 0;
+            invByYear[i.ano] += i.valor || 0;
+        });
+
+        const votosByYear = {};
+        votos.forEach(v => {
+            votosByYear[v.ano] = v.votos || 0;
+        });
+
+        const allYears = [...new Set([...Object.keys(invByYear), ...Object.keys(votosByYear)])]
+            .map(Number)
+            .sort((a, b) => b - a);
+
+        if (allYears.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="no-data">Sem dados disponíveis.</td></tr>';
+            return;
+        }
+
+        let rows = '';
+        allYears.forEach(ano => {
+            const inv = invByYear[ano] || 0;
+            const vot = votosByYear[ano] || 0;
+            const efficiency = inv > 0 ? (vot / inv) * 1000 : 0;
+
+            // Determine efficiency class
+            let efClass = '';
+            if (efficiency > 5) efClass = 'eficiencia-alta';
+            else if (efficiency > 1) efClass = 'eficiencia-media';
+            else if (efficiency > 0) efClass = 'eficiencia-baixa';
+
+            rows += `
+                <tr class="${efClass}">
+                    <td>${ano}</td>
+                    <td>${vot.toLocaleString('pt-BR')}</td>
+                    <td class="valor-cell">R$ ${inv.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td><strong>${efficiency.toFixed(2)}</strong></td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = rows;
+    }
+
+    // Chart: Distribuição por Área (Doughnut)
+    function updateDistribuicaoAreaChart(investments, total) {
+        const canvas = document.getElementById('chart-dist-area');
+        if (!canvas) return;
+
+        // Group by area
+        const byArea = {};
+        investments.forEach(i => {
+            const area = i.area || 'Não informado';
+            if (!byArea[area]) byArea[area] = 0;
+            byArea[area] += i.valor || 0;
+        });
+
+        const labels = Object.keys(byArea).sort((a, b) => byArea[b] - byArea[a]);
+        const data = labels.map(area => byArea[area]);
+
+        if (chartDistArea) {
+            chartDistArea.destroy();
+        }
+
+        if (labels.length === 0) {
+            canvas.parentElement.innerHTML = '<p class="no-data" style="padding: 2rem; text-align: center;">Sem dados de área.</p>';
+            return;
+        }
+
+        const colors = [
+            '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1'
+        ];
+
+        chartDistArea = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors.slice(0, labels.length),
+                    borderWidth: 2,
+                    borderColor: 'var(--card-bg)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 8,
+                            font: { size: 10 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const value = context.parsed;
+                                const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${context.label}: R$ ${value.toLocaleString('pt-BR')} (${percent}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Table: Investimento por Área
+    function updateAreaTable(investments, total) {
+        const table = document.getElementById('table-inv-area');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        // Group by area
+        const byArea = {};
+        investments.forEach(i => {
+            const area = i.area || 'Não informado';
+            if (!byArea[area]) byArea[area] = 0;
+            byArea[area] += i.valor || 0;
+        });
+
+        const sortedAreas = Object.entries(byArea).sort((a, b) => b[1] - a[1]);
+
+        if (sortedAreas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="no-data">Sem dados disponíveis.</td></tr>';
+            return;
+        }
+
+        let rows = '';
+        sortedAreas.forEach(([area, valor]) => {
+            const percent = total > 0 ? (valor / total) * 100 : 0;
+
+            // Determine percent class
+            let pClass = 'percent-low';
+            if (percent > 30) pClass = 'percent-high';
+            else if (percent > 15) pClass = 'percent-medium';
+
+            rows += `
+                <tr>
+                    <td>${area}</td>
+                    <td class="valor-cell">R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td class="percent-cell ${pClass}">${percent.toFixed(1)}%</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = rows;
+    }
+
+    // Listen for tab clicks
+    document.querySelectorAll('.tab-btn[data-tab="insights"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            populateInsightsFilters(); // Refresh filters
+            if (activeCityId) {
+                updateInsightsTab(activeCityId);
+            }
+        });
+    });
+
+    // Initialize insights system
+    setTimeout(() => {
+        initInsightsTab();
+    }, 500);
 
     // ============================================
     // FILTROS DE DADOS IMPORTADOS

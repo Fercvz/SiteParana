@@ -3068,3 +3068,189 @@ path.municipio.highlight-filter:not(.active) {
     border-color: var(--accent-color);
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
+
+/* ============================================
+   ABA INSIGHTS (Sidebar Direita)
+   ============================================ */
+
+.insights-tab-content {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Filtros Insights */
+.insights-filters {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+}
+
+.insights-filters .filter-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.insights-filters select {
+    flex: 1;
+    min-width: 100px;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.insights-filters select:hover {
+    border-color: var(--accent-color);
+}
+
+.insights-filters select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+/* KPI Cards Grid */
+.insights-kpis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.insight-kpi-card {
+    background: linear-gradient(135deg, var(--accent-color) 0%, #1d4ed8 100%);
+    border-radius: 12px;
+    padding: 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.25rem;
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+.insight-kpi-card .kpi-icon {
+    font-size: 1.5rem;
+}
+
+.insight-kpi-card .kpi-label {
+    font-size: 0.65rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 500;
+}
+
+.insight-kpi-card .kpi-value {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Responsivo - KPIs em 2 colunas para sidebar mais estreita */
+@media (max-width: 400px) {
+    .insights-kpis-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Tabelas Insights */
+.insights-table-section {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.insights-table-section h4 {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.insights-table-container {
+    overflow-x: auto;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.insights-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.insights-table th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+    padding: 0.6rem 0.5rem;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.insights-table td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.insights-table tr:hover td {
+    background: var(--bg-hover);
+}
+
+.insights-table .no-data {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 1rem;
+}
+
+/* Célula de valor monetário */
+.insights-table .valor-cell {
+    font-weight: 600;
+    color: var(--accent-color);
+}
+
+/* Célula de percentual */
+.insights-table .percent-cell {
+    font-weight: 600;
+}
+
+.insights-table .percent-high {
+    color: #16a34a;
+}
+
+.insights-table .percent-medium {
+    color: #ca8a04;
+}
+
+.insights-table .percent-low {
+    color: #dc2626;
+}
+
+/* Eficiência - highlight */
+.insights-table .eficiencia-alta {
+    background: rgba(22, 163, 74, 0.1);
+}
+
+.insights-table .eficiencia-media {
+    background: rgba(202, 138, 4, 0.1);
+}
+
+.insights-table .eficiencia-baixa {
+    background: rgba(220, 38, 38, 0.1);
+}

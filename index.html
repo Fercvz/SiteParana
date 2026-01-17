@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa Interativo do Paraná</title>
-    <link rel="stylesheet" href="styles.css?v=20260117b">
+    <link rel="stylesheet" href="styles.css?v=20260117c">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -156,7 +156,8 @@
                     <button class="tab-btn active" data-tab="info">Informações</button>
                     <button class="tab-btn" data-tab="eleitorado">Eleitorado</button>
                     <button class="tab-btn" data-tab="investimentos">Investimentos</button>
-                    <button class="tab-btn" data-tab="votos">Votos Recebidos</button>
+                    <button class="tab-btn" data-tab="votos">Votos</button>
+                    <button class="tab-btn" data-tab="insights">Insights</button>
                 </div>
 
                 <!-- Abas de Campanha e Insights removidas a pedido do usuário -->
@@ -314,6 +315,104 @@
                                     <tbody>
                                         <tr>
                                             <td colspan="4" class="no-data">Sem dados de comparação disponíveis.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba: Insights -->
+                <div class="tab-content" id="tab-insights">
+                    <div class="insights-tab-content">
+                        <!-- Filtros -->
+                        <div class="insights-filters">
+                            <div class="filter-row">
+                                <select id="filter-insights-ano">
+                                    <option value="all">Todos os Anos</option>
+                                </select>
+                                <select id="filter-insights-area">
+                                    <option value="all">Todas as Áreas</option>
+                                </select>
+                                <select id="filter-insights-tipo">
+                                    <option value="all">Todos os Tipos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- KPI Cards -->
+                        <div class="insights-kpis-grid">
+                            <div class="insight-kpi-card">
+                                <span class="kpi-icon">💰</span>
+                                <span class="kpi-label">Invest. por Habitante</span>
+                                <span class="kpi-value" id="kpi-inv-habitante">R$ 0,00</span>
+                            </div>
+                            <div class="insight-kpi-card">
+                                <span class="kpi-icon">🗳️</span>
+                                <span class="kpi-label">Total de Votos</span>
+                                <span class="kpi-value" id="kpi-total-votos">0</span>
+                            </div>
+                            <div class="insight-kpi-card">
+                                <span class="kpi-icon">📊</span>
+                                <span class="kpi-label">Total Investido</span>
+                                <span class="kpi-value" id="kpi-total-inv">R$ 0,00</span>
+                            </div>
+                        </div>
+
+                        <!-- Votos/Investimento por Ano -->
+                        <div class="chart-section">
+                            <h4>📈 Votos por R$ Investido (por Ano)</h4>
+                            <div class="chart-container">
+                                <canvas id="chart-votos-por-inv"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Tabela Votos/Investimento -->
+                        <div class="insights-table-section">
+                            <h4>📋 Eficiência por Ano</h4>
+                            <div class="insights-table-container">
+                                <table id="table-eficiencia-ano" class="insights-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ano</th>
+                                            <th>Votos</th>
+                                            <th>Investimento</th>
+                                            <th>Votos/R$1.000</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="4" class="no-data">Sem dados disponíveis.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- % Investimento por Área -->
+                        <div class="chart-section">
+                            <h4>🏛️ Distribuição por Área</h4>
+                            <div class="chart-container-small">
+                                <canvas id="chart-dist-area"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Tabela % por Área -->
+                        <div class="insights-table-section">
+                            <h4>📊 Investimento por Área</h4>
+                            <div class="insights-table-container">
+                                <table id="table-inv-area" class="insights-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Área</th>
+                                            <th>Valor</th>
+                                            <th>% do Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="3" class="no-data">Sem dados disponíveis.</td>
                                         </tr>
                                     </tbody>
                                 </table>
