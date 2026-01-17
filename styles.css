@@ -817,10 +817,56 @@ path.municipio:hover {
     opacity: 1;
 }
 
-/* Botão de toggle escondido no desktop */
-#toggle-filters-btn,
+/* ======================= */
+/* MOBILE TOGGLE BUTTON    */
+/* ======================= */
+
+/* Botão de toggle para abrir/fechar filtros no mobile */
+#toggle-filters-btn {
+    display: none;
+    position: fixed;
+    top: 80px;
+    left: 10px;
+    z-index: 600;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-color), #7c3aed);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+#toggle-filters-btn:hover {
+    transform: scale(1.05);
+}
+
+#toggle-filters-btn.active {
+    background: #ef4444;
+}
+
 .sidebar-header-mobile {
     display: none;
+}
+
+/* Overlay para mobile quando sidebar está aberta */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 90;
+    backdrop-filter: blur(2px);
+}
+
+.mobile-overlay.visible {
+    display: block;
 }
 
 /* ======================= */
@@ -1008,177 +1054,473 @@ path.municipio:hover {
     }
 }
 
-/* Small Tablets (600px - 768px) - sidebar ainda mais estreita */
+/* ======================= */
+/* MOBILE/TABLET RESPONSIVO */
+/* ======================= */
+
+/* Tablets pequenos e mobile grande (600px - 768px) */
 @media (max-width: 768px) {
+
+    /* Mostrar botão de toggle */
+    #toggle-filters-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        top: 65px;
+    }
+
+    /* Header compacto */
     .site-header {
-        height: 55px;
+        height: 56px;
         padding: 0 0.75rem;
     }
 
     .brand-container h1 {
-        font-size: 0.9rem;
-    }
-
-    .search-container {
-        max-width: 120px;
-        padding: 0.3rem 0.5rem;
-    }
-
-    .search-container input {
-        width: 70px;
-        font-size: 0.8rem;
-    }
-
-    #login-btn {
-        padding: 0.35rem 0.5rem;
-        font-size: 0.7rem;
-    }
-
-    #theme-toggle {
-        width: 28px;
-        height: 28px;
-    }
-
-    /* Sidebar mais estreita */
-    .left-sidebar {
-        width: 180px;
-        min-width: 180px;
-        padding: 0.75rem 0.5rem;
-    }
-
-    .sidebar-section {
-        margin-bottom: 1rem;
-    }
-
-    .sidebar-section h3 {
-        font-size: 0.6rem;
-        margin-bottom: 0.4rem;
-    }
-
-    .filter-group {
-        margin-bottom: 0.75rem;
-    }
-
-    .filter-group label {
-        font-size: 0.7rem;
-    }
-
-    .filter-group select {
-        padding: 0.4rem;
-        font-size: 0.75rem;
-    }
-
-    button#reset-filters {
-        padding: 0.4rem;
-        font-size: 0.7rem;
-    }
-
-    .filter-note {
-        padding: 0.3rem;
-        font-size: 0.7rem;
-    }
-
-    .legend-box {
-        padding: 0.4rem;
-    }
-
-    .legend-item {
-        font-size: 0.7rem;
-    }
-
-    .legend-color {
-        width: 10px;
-        height: 10px;
-    }
-
-    /* Right sidebar narrower */
-    .sidebar {
-        width: 250px;
-    }
-
-    .sidebar-header {
-        padding: 1rem;
-    }
-
-    .sidebar-header h2 {
-        font-size: 1.1rem;
-    }
-
-    .sidebar-content {
-        padding: 1rem;
-    }
-
-    .zoom-controls {
-        bottom: 0.75rem;
-        right: 0.75rem;
-    }
-
-    .zoom-controls button {
-        padding: 6px 10px;
-        font-size: 0.9rem;
-    }
-
-    /* Campaign Stats Bar Responsive */
-    .campaign-stats {
-        top: 60px;
-        max-width: calc(100vw - 200px);
-        padding: 0.4rem 0.75rem;
-        gap: 0.75rem;
-    }
-
-    .stat-item {
-        flex-direction: row;
-        gap: 0.35rem;
-    }
-
-    .stat-label {
-        font-size: 0.6rem;
-    }
-
-    .stat-value {
         font-size: 0.85rem;
-    }
-
-    .header-divider {
-        height: 20px;
-        margin: 0 0.3rem;
-    }
-
-    .btn-icon {
-        padding: 0.3rem 0.5rem;
-        font-size: 0.7rem;
-    }
-
-    .admin-actions {
-        gap: 0.3rem;
-    }
-}
-
-/* Mobile Phones (max 480px) */
-@media (max-width: 480px) {
-    .site-header {
-        height: 50px;
-        padding: 0 0.5rem;
-    }
-
-    .brand-container h1 {
-        font-size: 0.8rem;
+        max-width: 110px;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
 
     .search-container {
-        max-width: 120px;
-        padding: 0.25rem 0.5rem;
+        max-width: 110px;
+        padding: 0.3rem 0.5rem;
     }
 
     .search-container input {
-        width: 60px;
+        width: 65px;
         font-size: 0.8rem;
     }
 
-    #search-btn {
-        padding: 0.25rem;
+    .search-icon {
         font-size: 0.8rem;
+    }
+
+    #login-btn {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.75rem;
+    }
+
+    #login-btn::before {
+        display: none;
+    }
+
+    #theme-toggle {
+        width: 32px;
+        height: 32px;
+    }
+
+    .header-tools {
+        gap: 0.4rem;
+    }
+
+    /* LEFT SIDEBAR - Oculta por padrão, abre como drawer */
+    .left-sidebar {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        min-width: 280px;
+        max-width: 85vw;
+        z-index: 500;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        padding: 1rem;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+        overflow-y: auto;
+    }
+
+    .left-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .sidebar-section h3 {
+        font-size: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .filter-group {
+        margin-bottom: 1rem;
+    }
+
+    .filter-group label {
+        font-size: 0.8rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .filter-group select {
+        padding: 0.65rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    button#reset-filters {
+        padding: 0.65rem;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+    }
+
+    .legend-box {
+        padding: 0.75rem;
+    }
+
+    .legend-item {
+        font-size: 0.8rem;
+        padding: 0.25rem 0;
+    }
+
+    .legend-color {
+        width: 14px;
+        height: 14px;
+    }
+
+    /* Main content ocupa tela toda */
+    .main-content {
+        flex-direction: column;
+    }
+
+    .map-container {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+    }
+
+    /* RIGHT SIDEBAR - Bottom Sheet style */
+    .sidebar {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 70vh;
+        max-height: 70vh;
+        border-radius: 20px 20px 0 0;
+        transform: translateY(100%);
+        z-index: 600;
+    }
+
+    .sidebar.open {
+        transform: translateY(0);
+    }
+
+    .sidebar.resizable {
+        min-width: 100%;
+        max-width: 100%;
+        width: 100% !important;
+    }
+
+    .sidebar-resize-handle {
+        display: none;
+    }
+
+    .sidebar-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: var(--border-color);
+        border-radius: 2px;
+    }
+
+    .sidebar-header h2 {
+        font-size: 1.1rem;
+        padding-top: 0.5rem;
+    }
+
+    .sidebar-content {
+        padding: 1rem;
+        max-height: calc(70vh - 120px);
+        overflow-y: auto;
+    }
+
+    /* Tabs responsivas */
+    .sidebar-tabs {
+        padding: 0 0.5rem;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .sidebar-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab-btn {
+        padding: 0.65rem 0.5rem;
+        font-size: 0.7rem;
+        min-width: max-content;
+        flex-shrink: 0;
+    }
+
+    /* Zoom controls - posição ajustada */
+    .zoom-controls {
+        bottom: 1rem;
+        right: 1rem;
+        z-index: 100;
+    }
+
+    .zoom-controls button {
+        padding: 8px 12px;
+        font-size: 1rem;
+    }
+
+    /* Chat widget menor */
+    .chat-widget-container {
+        bottom: 1rem;
+        right: 1rem;
+    }
+
+    .chat-toggle-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    .chat-toggle-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .chat-window {
+        width: calc(100vw - 2rem);
+        max-width: 350px;
+        height: 60vh;
+        bottom: 60px;
+        right: 0;
+    }
+
+    /* Campaign Stats */
+    .campaign-stats {
+        top: 58px;
+        left: 60px;
+        right: 10px;
+        transform: none;
+        max-width: none;
+        width: auto;
+        padding: 0.4rem 0.6rem;
+        gap: 0.5rem;
+        border-radius: 8px;
+    }
+
+    .stat-item {
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    .stat-label {
+        font-size: 0.55rem;
+    }
+
+    .stat-value {
+        font-size: 0.75rem;
+    }
+
+    .header-divider {
+        height: 18px;
+        margin: 0 0.25rem;
+    }
+
+    .btn-icon {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.65rem;
+    }
+
+    .admin-actions {
+        gap: 0.25rem;
+    }
+
+    /* Tooltip mobile */
+    .tooltip {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
+        max-width: 200px;
+        white-space: normal;
+    }
+
+    /* Modals responsivos */
+    .modal-content {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        max-height: 90vh;
+        padding: 1.25rem;
+        border-radius: 16px;
+    }
+
+    .modal-content.medium-modal,
+    .modal-content.large-modal {
+        width: 95vw !important;
+        max-width: 95vw !important;
+    }
+
+    .modal-header h3,
+    .modal-header h2 {
+        font-size: 1.1rem;
+    }
+
+    .example-table-container {
+        padding: 1rem;
+        overflow-x: auto;
+    }
+
+    .example-table {
+        font-size: 0.8rem;
+    }
+
+    .example-table th,
+    .example-table td {
+        padding: 0.5rem 0.6rem;
+    }
+
+    .modal-list {
+        font-size: 0.85rem;
+    }
+
+    .modal-footer-center .btn-primary {
+        width: 100%;
+        padding: 0.8rem;
+    }
+
+    /* Analytics modal responsivo */
+    .analytics-modal {
+        width: 98vw !important;
+        max-width: 98vw !important;
+    }
+
+    .analytics-body {
+        padding: 1rem;
+    }
+
+    .analytics-filters {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .analytics-filters .filter-group {
+        width: 100%;
+    }
+
+    .analytics-kpis {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .kpi-card {
+        padding: 0.75rem;
+    }
+
+    .kpi-label {
+        font-size: 0.65rem;
+    }
+
+    .kpi-value {
+        font-size: 1.1rem;
+    }
+
+    .analytics-charts {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card.chart-large {
+        grid-column: 1;
+    }
+
+    .chart-wrapper {
+        height: 200px;
+    }
+
+    /* Eleitorado tab responsivo */
+    .eleitorado-content {
+        padding: 0.75rem;
+    }
+
+    .total-eleitores {
+        padding: 1rem;
+    }
+
+    .total-value {
+        font-size: 1.5rem;
+    }
+
+    .chart-container {
+        height: 280px;
+    }
+
+    .chart-container-small {
+        height: 140px;
+    }
+
+    /* Investimentos tab responsivo */
+    .investimentos-header {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .investimento-total-card,
+    .investimento-count-card {
+        padding: 0.65rem;
+    }
+
+    .investimento-total-card .total-value,
+    .investimento-count-card .total-value {
+        font-size: 1rem;
+    }
+
+    .inv-filters-cidade {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .inv-filters-cidade select {
+        width: 100%;
+    }
+
+    /* Filtered cities panel */
+    #filtered-cities-panel {
+        left: 10px;
+        right: 10px;
+        top: auto;
+        bottom: 10px;
+        width: auto;
+        max-width: none;
+        max-height: 40vh;
+    }
+}
+
+/* Mobile pequeno (< 480px) */
+@media (max-width: 480px) {
+    .site-header {
+        height: 52px;
+        padding: 0 0.5rem;
+    }
+
+    .brand-container h1 {
+        font-size: 0.75rem;
+        max-width: 85px;
+    }
+
+    .search-container {
+        max-width: 90px;
+        padding: 0.25rem 0.4rem;
+    }
+
+    .search-container input {
+        width: 50px;
+        font-size: 0.75rem;
     }
 
     #login-btn {
@@ -1193,73 +1535,105 @@ path.municipio:hover {
     }
 
     .header-tools {
-        gap: 0.35rem;
+        gap: 0.3rem;
     }
 
+    #toggle-filters-btn {
+        top: 58px;
+        left: 8px;
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+
+    /* Left sidebar mobile */
     .left-sidebar {
-        min-height: 55px;
-        padding: 0.4rem 0.5rem;
-        gap: 0.5rem;
+        top: 52px;
+        width: 260px;
     }
 
-    .filter-group select {
-        padding: 0.35rem 0.5rem;
-        font-size: 0.75rem;
-        min-width: 100px;
-    }
-
-    button#reset-filters {
-        padding: 0.35rem 0.5rem;
-        font-size: 0.7rem;
-    }
-
-    .filter-note {
-        padding: 0.25rem 0.4rem;
-        font-size: 0.7rem;
-    }
-
+    /* Right sidebar */
     .sidebar {
         height: 75vh;
-    }
-
-    .sidebar-header {
-        padding: 0.75rem;
+        max-height: 75vh;
     }
 
     .sidebar-header h2 {
         font-size: 1rem;
     }
 
-    .sidebar-content {
-        padding: 0.75rem;
+    .tab-btn {
+        padding: 0.55rem 0.4rem;
+        font-size: 0.65rem;
     }
 
-    .description {
-        font-size: 0.85rem;
-        padding: 0.75rem;
-        margin-bottom: 1rem;
-    }
-
-    .detail-row {
-        font-size: 0.85rem;
-        padding-bottom: 0.6rem;
-        margin-bottom: 0.6rem;
-    }
-
+    /* Zoom controls */
     .zoom-controls {
-        bottom: 0.5rem;
-        right: 0.5rem;
+        bottom: 0.75rem;
+        right: 0.75rem;
     }
 
     .zoom-controls button {
-        padding: 5px 8px;
-        font-size: 0.85rem;
+        padding: 6px 10px;
+        font-size: 0.9rem;
     }
 
-    /* Tooltip smaller on mobile */
-    .tooltip {
-        font-size: 0.75rem;
-        padding: 0.4rem 0.6rem;
+    /* Chat widget */
+    .chat-toggle-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .chat-window {
+        width: calc(100vw - 1.5rem);
+        height: 55vh;
+        bottom: 55px;
+    }
+
+    /* Campaign stats very compact */
+    .campaign-stats {
+        top: 54px;
+        left: 55px;
+        right: 8px;
+        padding: 0.3rem 0.5rem;
+        gap: 0.35rem;
+    }
+
+    .stat-label {
+        font-size: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 0.7rem;
+    }
+
+    .btn-icon {
+        padding: 0.2rem 0.35rem;
+        font-size: 0.6rem;
+    }
+
+    /* Details compact */
+    .description {
+        font-size: 0.8rem;
+        padding: 0.6rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .detail-row {
+        font-size: 0.8rem;
+        padding-bottom: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Analytics KPIs single column on very small screens */
+    .analytics-kpis {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Votos tab */
+    .votos-header {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
     }
 }
 

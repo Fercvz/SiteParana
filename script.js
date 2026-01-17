@@ -217,7 +217,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function setupMobileInteractions() {
-        // Removed for Desktop/Web reversion
+        const toggleBtn = document.getElementById('toggle-filters-btn');
+        const leftSidebar = document.getElementById('left-sidebar');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+
+        if (!toggleBtn || !leftSidebar) return;
+
+        // Toggle sidebar when button is clicked
+        toggleBtn.addEventListener('click', () => {
+            const isOpen = leftSidebar.classList.contains('open');
+
+            if (isOpen) {
+                leftSidebar.classList.remove('open');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = '☰';
+                toggleBtn.setAttribute('aria-label', 'Abrir Filtros');
+                if (mobileOverlay) mobileOverlay.classList.remove('visible');
+            } else {
+                leftSidebar.classList.add('open');
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = '✕';
+                toggleBtn.setAttribute('aria-label', 'Fechar Filtros');
+                if (mobileOverlay) mobileOverlay.classList.add('visible');
+            }
+        });
+
+        // Close sidebar when overlay is clicked
+        if (mobileOverlay) {
+            mobileOverlay.addEventListener('click', () => {
+                leftSidebar.classList.remove('open');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = '☰';
+                toggleBtn.setAttribute('aria-label', 'Abrir Filtros');
+                mobileOverlay.classList.remove('visible');
+            });
+        }
+
+        // Close sidebar when a filter is selected (better UX on mobile)
+        const filterSelects = leftSidebar.querySelectorAll('select');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', () => {
+                // Small delay to let the user see the selection
+                setTimeout(() => {
+                    if (window.innerWidth <= 768) {
+                        leftSidebar.classList.remove('open');
+                        toggleBtn.classList.remove('active');
+                        toggleBtn.innerHTML = '☰';
+                        if (mobileOverlay) mobileOverlay.classList.remove('visible');
+                    }
+                }, 300);
+            });
+        });
+
+        // Handle window resize - close sidebar if window is enlarged
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                leftSidebar.classList.remove('open');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = '☰';
+                if (mobileOverlay) mobileOverlay.classList.remove('visible');
+            }
+        });
     }
 
     // --- Draggable Modals ---

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa Interativo do Paraná</title>
-    <link rel="stylesheet" href="styles.css?v=20260117a">
+    <link rel="stylesheet" href="styles.css?v=20260117b">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -61,8 +61,14 @@
         <!-- Main Content Area -->
         <div class="main-content">
 
+            <!-- Mobile Toggle Button for Filters -->
+            <button id="toggle-filters-btn" aria-label="Abrir Filtros">☰</button>
+
+            <!-- Mobile Overlay -->
+            <div id="mobile-overlay" class="mobile-overlay"></div>
+
             <!-- Left Sidebar (Filters) -->
-            <aside class="left-sidebar">
+            <aside class="left-sidebar" id="left-sidebar">
 
                 <div class="sidebar-section visualization">
                     <h3>Visualização</h3>
