@@ -1,14 +1,14 @@
 {
   "alvorada_do_sul": {
-    "votes": 8000,
+    "votes": 10000,
     "money": 8000.0
   },
   "londrina": {
-    "votes": 20500,
-    "money": 20500.0
+    "votes": 50000,
+    "money": 165000.0
   },
   "maringa": {
-    "votes": 55000,
+    "votes": 30000,
     "money": 55000.0
   }
 }

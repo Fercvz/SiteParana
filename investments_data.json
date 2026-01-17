@@ -48,7 +48,7 @@
     "cityId": "londrina",
     "cityName": "Londrina",
     "ano": 2020,
-    "valor": 5000.0,
+    "valor": 30000.0,
     "area": "Infraestrutura",
     "tipo": "Bancada",
     "descricao": "TESTE 1 LONDRINA"
@@ -57,7 +57,7 @@
     "cityId": "londrina",
     "cityName": "Londrina",
     "ano": 2021,
-    "valor": 1500.0,
+    "valor": 25000.0,
     "area": "Infraestrutura",
     "tipo": "Bancada",
     "descricao": "TESTE 2 LONDRINA"
@@ -66,7 +66,7 @@
     "cityId": "londrina",
     "cityName": "Londrina",
     "ano": 2023,
-    "valor": 5000.0,
+    "valor": 50000.0,
     "area": "Educação",
     "tipo": "Estado",
     "descricao": "ALO"
@@ -75,7 +75,7 @@
     "cityId": "londrina",
     "cityName": "Londrina",
     "ano": 2024,
-    "valor": 6000.0,
+    "valor": 10000.0,
     "area": "Educação",
     "tipo": "Estado",
     "descricao": "SILVIO"
@@ -84,7 +84,7 @@
     "cityId": "londrina",
     "cityName": "Londrina",
     "ano": 2025,
-    "valor": 3000.0,
+    "valor": 50000.0,
     "area": "Educação",
     "tipo": "Impositiva - Individual",
     "descricao": "COMO VAI"

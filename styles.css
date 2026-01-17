@@ -3126,32 +3126,37 @@ path.municipio.highlight-filter:not(.active) {
 .insight-kpi-card {
     background: linear-gradient(135deg, var(--accent-color) 0%, #1d4ed8 100%);
     border-radius: 12px;
-    padding: 1rem 0.75rem;
+    padding: 1.25rem 0.75rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 0.25rem;
-    color: white;
+    gap: 0.5rem;
+    color: #ffffff;
     box-shadow: var(--shadow-md);
 }
 
 .insight-kpi-card .kpi-icon {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .insight-kpi-card .kpi-label {
-    font-size: 0.65rem;
-    opacity: 0.9;
+    font-size: 0.75rem;
+    color: #ffffff;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    font-weight: 500;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    line-height: 1.3;
 }
 
 .insight-kpi-card .kpi-value {
-    font-size: 1rem;
+    font-size: 1.15rem;
     font-weight: 700;
     line-height: 1.2;
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Responsivo - KPIs em 2 colunas para sidebar mais estreita */
@@ -3253,4 +3258,442 @@ path.municipio.highlight-filter:not(.active) {
 
 .insights-table .eficiencia-baixa {
     background: rgba(220, 38, 38, 0.1);
+}
+
+/* ============================================
+   MOBILE RESPONSIVENESS
+   ============================================ */
+
+/* Mobile Toggle Button */
+#toggle-filters-btn {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 2000;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    transition: all 0.3s ease;
+}
+
+#toggle-filters-btn:hover {
+    background: var(--accent-hover);
+    transform: scale(1.05);
+}
+
+#toggle-filters-btn.active {
+    background: #dc2626;
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.mobile-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ============================================
+   TABLET (iPad) - max-width: 1024px
+   ============================================ */
+@media (max-width: 1024px) {
+    .site-header {
+        padding: 0 1rem;
+    }
+
+    .brand-container h1 {
+        font-size: 1.1rem;
+    }
+
+    .left-sidebar {
+        width: 200px;
+        min-width: 200px;
+    }
+
+    .sidebar {
+        width: 320px;
+    }
+
+    .search-container input {
+        width: 200px;
+    }
+}
+
+/* ============================================
+   MOBILE LANDSCAPE & SMALL TABLETS - max-width: 768px
+   ============================================ */
+@media (max-width: 768px) {
+
+    /* Show mobile toggle and overlay */
+    #toggle-filters-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-overlay {
+        display: block;
+    }
+
+    /* Header adjustments */
+    .site-header {
+        height: 60px;
+        padding: 0 0.75rem;
+    }
+
+    .brand-container h1 {
+        font-size: 0.95rem;
+    }
+
+    .brand-container .subtitle {
+        display: none;
+    }
+
+    .header-tools {
+        gap: 0.5rem;
+    }
+
+    .search-container {
+        display: none;
+    }
+
+    .login-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    #theme-toggle {
+        padding: 0.4rem;
+        font-size: 1rem;
+    }
+
+    /* Main content full width */
+    .main-content {
+        flex-direction: column;
+    }
+
+    /* Left Sidebar - Off-canvas */
+    .left-sidebar {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        min-width: 280px;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        background: var(--sidebar-bg);
+        overflow-y: auto;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .left-sidebar.open {
+        transform: translateX(0);
+    }
+
+    /* Right Sidebar (City Details) - Bottom Sheet */
+    .sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100% !important;
+        max-height: 70vh;
+        min-height: auto;
+        border-radius: 20px 20px 0 0;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        z-index: 1100;
+    }
+
+    .sidebar.open {
+        transform: translateY(0);
+    }
+
+    .sidebar-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-tabs {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        padding: 0.5rem;
+    }
+
+    .sidebar-tabs .tab-btn {
+        flex: 1 1 auto;
+        min-width: 80px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    /* Map container */
+    .map-container {
+        height: calc(100vh - 60px);
+    }
+
+    /* Hide zoom controls on mobile */
+    .zoom-controls {
+        bottom: 100px;
+        right: 1rem;
+    }
+
+    /* Chat widget adjustments */
+    .chat-widget-container {
+        bottom: 90px;
+        right: 1rem;
+    }
+
+    .chat-panel {
+        width: calc(100vw - 2rem);
+        max-width: 350px;
+        height: 400px;
+        right: 0;
+    }
+
+    /* Campaign stats bar */
+    .campaign-stats {
+        flex-wrap: wrap;
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+
+    .admin-actions {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .admin-actions button {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
+    }
+}
+
+/* ============================================
+   MOBILE PORTRAIT (iPhone, Samsung) - max-width: 480px
+   ============================================ */
+@media (max-width: 480px) {
+
+    /* Header even more compact */
+    .site-header {
+        height: 55px;
+        padding: 0 0.5rem;
+    }
+
+    .brand-container h1 {
+        font-size: 0.85rem;
+    }
+
+    .login-btn {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.75rem;
+    }
+
+    #theme-toggle {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+
+    /* Toggle button smaller */
+    #toggle-filters-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.3rem;
+        bottom: 15px;
+        left: 15px;
+    }
+
+    /* Left Sidebar adjustment */
+    .left-sidebar {
+        top: 55px;
+        width: 260px;
+        min-width: 260px;
+    }
+
+    /* Right Sidebar - Full height on mobiles */
+    .sidebar {
+        max-height: 80vh;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .sidebar-tabs {
+        gap: 0.15rem;
+    }
+
+    .sidebar-tabs .tab-btn {
+        padding: 0.4rem 0.5rem;
+        font-size: 0.7rem;
+        min-width: 60px;
+    }
+
+    /* Insights KPIs in 1 column */
+    .insights-kpis-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .insight-kpi-card {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .insight-kpi-card .kpi-icon {
+        font-size: 1.5rem;
+    }
+
+    .insight-kpi-card .kpi-label {
+        text-align: left;
+        font-size: 0.65rem;
+    }
+
+    .insight-kpi-card .kpi-value {
+        font-size: 1rem;
+    }
+
+    /* Filters in insights tab */
+    .insights-filters .filter-row {
+        flex-direction: column;
+    }
+
+    .insights-filters select {
+        width: 100%;
+    }
+
+    /* Chart sections */
+    .chart-container,
+    .chart-container-small {
+        height: 180px;
+    }
+
+    /* Tables */
+    .insights-table th,
+    .insights-table td {
+        padding: 0.4rem;
+        font-size: 0.7rem;
+    }
+
+    /* Zoom controls */
+    .zoom-controls {
+        bottom: 80px;
+        right: 0.75rem;
+    }
+
+    .zoom-controls button {
+        padding: 8px 10px;
+        font-size: 1rem;
+    }
+
+    /* Chat */
+    .chat-toggle-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.3rem;
+    }
+
+    .chat-panel {
+        width: calc(100vw - 1.5rem);
+        height: 350px;
+        bottom: 70px;
+    }
+
+    /* Modals */
+    .modal-content {
+        width: 95%;
+        max-width: none;
+        margin: 1rem;
+        max-height: calc(100vh - 2rem);
+    }
+
+    /* Eleitorado tab */
+    .eleitorado-content .chart-container,
+    .eleitorado-content .chart-container-small {
+        height: 160px;
+    }
+
+    /* Investimentos tab */
+    .inv-filters-cidade {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .inv-filters-cidade select {
+        width: 100%;
+    }
+}
+
+/* ============================================
+   VERY SMALL SCREENS - max-width: 360px
+   ============================================ */
+@media (max-width: 360px) {
+    .site-header {
+        height: 50px;
+    }
+
+    .brand-container h1 {
+        font-size: 0.75rem;
+    }
+
+    .login-btn {
+        display: none;
+    }
+
+    .left-sidebar {
+        top: 50px;
+        width: 240px;
+        min-width: 240px;
+    }
+
+    .sidebar-tabs .tab-btn {
+        font-size: 0.65rem;
+        padding: 0.35rem 0.4rem;
+    }
+
+    #toggle-filters-btn {
+        width: 46px;
+        height: 46px;
+        font-size: 1.2rem;
+    }
+}
+
+/* ============================================
+   LANDSCAPE MODE ADJUSTMENTS
+   ============================================ */
+@media (max-height: 500px) and (orientation: landscape) {
+    .sidebar {
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .left-sidebar {
+        top: 55px;
+    }
+
+    .chart-container,
+    .chart-container-small {
+        height: 150px;
+    }
 }

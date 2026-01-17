@@ -1443,11 +1443,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     },
                     tooltip: {
                         callbacks: {
+                            title: function () {
+                                return ''; // Remove o título duplicado
+                            },
                             label: function (context) {
                                 let label = context.label || '';
                                 if (label) label += ': ';
                                 let value = context.parsed;
-                                label += value + '%';
+                                label += value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
                                 if (totalAbsolute) {
                                     const abs = Math.round((value / 100) * totalAbsolute);
                                     label += ` (${abs.toLocaleString('pt-BR')} eleitores)`;
@@ -1482,17 +1485,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
+                            title: function () {
+                                return ''; // Remove o título duplicado
+                            },
                             label: function (context) {
-                                if (horizontal) value = context.parsed.x; // Handle horizontal bar
-
-                                // Remove prefix logic and just return value
-                                // label += ': ' + value + '%'; 
-                                label = value + '%';
+                                let value = horizontal ? context.parsed.x : context.parsed.y;
+                                let labelText = context.label + ': ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
                                 if (totalAbsolute) {
                                     const abs = Math.round((value / 100) * totalAbsolute);
-                                    label += ` (${abs.toLocaleString('pt-BR')} eleitores)`;
+                                    labelText += ` (${abs.toLocaleString('pt-BR')} eleitores)`;
                                 }
-                                return label;
+                                return labelText;
                             }
                         }
                     }
@@ -3362,10 +3365,10 @@ ${cityInvestments || ''}
                 variacao = ((anoAtual.votos - anoAnterior.votos) / anoAnterior.votos) * 100;
                 if (variacao > 0) {
                     varClass = 'variacao-positiva';
-                    varText = `+${variacao.toFixed(1)}%`;
+                    varText = `+${variacao.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
                 } else if (variacao < 0) {
                     varClass = 'variacao-negativa';
-                    varText = `${variacao.toFixed(1)}%`;
+                    varText = `${variacao.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
                 } else {
                     varText = '0%';
                 }
@@ -3583,7 +3586,7 @@ ${cityInvestments || ''}
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return `${context.parsed.y.toFixed(2)} votos/R$1.000`;
+                                return `${context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} votos/R$1.000`;
                             }
                         }
                     }
@@ -3646,8 +3649,8 @@ ${cityInvestments || ''}
                 <tr class="${efClass}">
                     <td>${ano}</td>
                     <td>${vot.toLocaleString('pt-BR')}</td>
-                    <td class="valor-cell">R$ ${inv.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                    <td><strong>${efficiency.toFixed(2)}</strong></td>
+                    <td class="valor-cell">R$ ${inv.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td><strong>${efficiency.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                 </tr>
             `;
         });
@@ -3712,8 +3715,8 @@ ${cityInvestments || ''}
                         callbacks: {
                             label: function (context) {
                                 const value = context.parsed;
-                                const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                return `${context.label}: R$ ${value.toLocaleString('pt-BR')} (${percent}%)`;
+                                const percent = total > 0 ? ((value / total) * 100) : 0;
+                                return `${context.label}: R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${percent.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%)`;
                             }
                         }
                     }
@@ -3757,8 +3760,8 @@ ${cityInvestments || ''}
             rows += `
                 <tr>
                     <td>${area}</td>
-                    <td class="valor-cell">R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                    <td class="percent-cell ${pClass}">${percent.toFixed(1)}%</td>
+                    <td class="valor-cell">R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="percent-cell ${pClass}">${percent.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</td>
                 </tr>
             `;
         });
