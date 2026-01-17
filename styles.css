@@ -3501,51 +3501,30 @@ path.municipio.highlight-filter:not(.active) {
         padding: 0 0.5rem;
     }
 
+    /* Header Title Truncation */
     .brand-container h1 {
         font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
     }
 
-    .login-btn {
-        padding: 0.35rem 0.6rem;
-        font-size: 0.75rem;
+    /* Admin Buttons Stack */
+    #campaign-stats .admin-actions {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        gap: 0.5rem;
     }
 
-    #theme-toggle {
-        width: 36px;
-        height: 36px;
-        font-size: 0.9rem;
+    #campaign-stats .import-wrapper {
+        width: 100%;
     }
 
-    /* Toggle button smaller */
-    #toggle-filters-btn {
-        width: 50px;
-        height: 50px;
-        font-size: 1.3rem;
-        bottom: 15px;
-        left: 15px;
-    }
-
-    /* Left Sidebar adjustment */
-    .left-sidebar {
-        top: 55px;
-        width: 260px;
-        min-width: 260px;
-    }
-
-    /* Right Sidebar - Full height on mobiles */
-    .sidebar {
-        max-height: 80vh;
-        border-radius: 16px 16px 0 0;
-    }
-
-    .sidebar-tabs {
-        gap: 0.15rem;
-    }
-
-    .sidebar-tabs .tab-btn {
-        padding: 0.4rem 0.5rem;
-        font-size: 0.7rem;
-        min-width: 60px;
+    #campaign-stats .btn-icon {
+        width: 100%;
+        justify-content: center;
     }
 
     /* Insights KPIs in 1 column */

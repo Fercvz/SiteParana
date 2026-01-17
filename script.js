@@ -1377,7 +1377,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         maleValues.reverse();
         femaleValues.reverse();
 
-        renderPyramidChart('chart-idade', faixaLabels, maleValues, femaleValues, data.total_eleitores);
+        // Shorten labels on mobile for better readability
+        const isMobile = window.innerWidth < 640;
+        const displayLabels = isMobile ? faixaLabels.map(l => {
+            return l.replace(' anos ou mais', '+').replace(' anos', '').replace(' a ', '-');
+        }) : faixaLabels;
+
+        renderPyramidChart('chart-idade', displayLabels, maleValues, femaleValues, data.total_eleitores);
 
         // Grau de Instrução
         // Grau de Instrução
@@ -1501,8 +1507,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 },
                 scales: {
-                    x: { ticks: { font: { size: 10 }, color: textColor } },
-                    y: { ticks: { font: { size: 10 }, color: textColor, autoSkip: false } }
+                    x: { ticks: { font: { size: window.innerWidth < 640 ? 8 : 10 }, color: textColor } },
+                    y: { ticks: { font: { size: window.innerWidth < 640 ? 8 : 10 }, color: textColor, autoSkip: false } }
                 }
             };
         }
@@ -1590,7 +1596,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ticks: {
                             color: textColor,
                             autoSkip: false,
-                            font: { size: 10 }
+                            font: { size: window.innerWidth < 640 ? 8 : 10 }
                         }
                     }
                 }
@@ -3501,15 +3507,14 @@ ${cityInvestments || ''}
         const invPorHabitante = habitantes > 0 ? totalInvestido / habitantes : 0;
 
         // Update KPI Cards
-        document.getElementById('kpi-inv-habitante').textContent =
-            `R$ ${invPorHabitante.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        // Removed: kpi-inv-habitante
         document.getElementById('kpi-total-votos').textContent =
             totalVotos.toLocaleString('pt-BR');
         document.getElementById('kpi-total-inv').textContent =
             `R$ ${totalInvestido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
         // Update Votos/Investimento por Ano
-        updateEficienciaChart(cityInvestments, cityVotos);
+        // Removed: updateEficienciaChart(cityInvestments, cityVotos);
         updateEficienciaTable(cityInvestments, cityVotos);
 
         // Update % por Área
