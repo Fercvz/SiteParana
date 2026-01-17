@@ -35,6 +35,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     let citiesData = {};
     let campaignData = {};
     let eleitoradoData = {};
+    // Novo: Armazenar votos por cidade e ano
+    // Estrutura: { 'cidade-slug': [{ ano: 2024, votos: 15000 }, ...] }
+    let votosData = {};
+    let chartVotosEvolucao = null;
+    let chartVotosCrescimento = null;
     let filters = {
         party: 'all'
     };
@@ -2195,17 +2200,17 @@ ${cityInvestments || ''}
                 const cleanHeaders = headerRow.filter(h => h !== "");
 
                 // Validação 1 & 2: Colunas Corretas e Únicas
-                // Esperado: Cidade, Votos, Investimento
+                // NOVO: Esperado: CIDADE, ANO, VOTOS
 
                 // Normaliza para verificar presença
                 const lowerHeaders = headerRow.map(h => h.toLowerCase());
                 const idxCidade = lowerHeaders.indexOf('cidade');
+                const idxAno = lowerHeaders.indexOf('ano');
                 const idxVotos = lowerHeaders.indexOf('votos');
-                const idxInvest = lowerHeaders.findIndex(h => h.includes('investimento'));
 
                 // Verificação de nomes (existência)
-                if (idxCidade === -1 || idxVotos === -1 || idxInvest === -1) {
-                    alert("A tabela não foi importada, por conta de não atender as especificações.\n\nMotivo: As colunas obrigatórias não foram encontradas.\nEsperado: Cidade, Votos, Investimento.");
+                if (idxCidade === -1 || idxAno === -1 || idxVotos === -1) {
+                    alert("A tabela não foi importada, por conta de não atender as especificações.\n\nMotivo: As colunas obrigatórias não foram encontradas.\nEsperado: CIDADE, ANO, VOTOS.");
                     return;
                 }
 
@@ -2250,22 +2255,20 @@ ${cityInvestments || ''}
                         continue;
                     }
 
-                    const votes = parseInt(row[idxVotos]) || 0;
+                    // NOVO: Pega ANO e VOTOS
+                    const ano = parseInt(row[idxAno]) || 0;
+                    const votos = parseInt(row[idxVotos]) || 0;
 
-                    let rawMoney = row[idxInvest];
-                    let money = 0;
-                    if (typeof rawMoney === 'string') {
-                        rawMoney = rawMoney.replace('R$', '').replace(/\s/g, '').replace(',', '.');
-
-                        money = parseFloat(rawMoney) || 0;
-                    } else if (typeof rawMoney === 'number') {
-                        money = rawMoney;
+                    // Valida ano
+                    if (ano < 1900 || ano > 2100) {
+                        errors.push(`Linha ${i + 1}: Ano inválido "${row[idxAno]}".`);
+                        continue;
                     }
 
                     bulkItems.push({
                         city_slug: slug,
-                        votes: votes,
-                        money: money
+                        ano: ano,
+                        votos: votos
                     });
                 }
 
@@ -2275,24 +2278,77 @@ ${cityInvestments || ''}
                 }
 
                 if (bulkItems.length > 0) {
-                    // Envia pro backend
+                    // NOVO: Armazenar votos por cidade/ano localmente
+                    // Limpa dados antigos e reprocessa
+                    votosData = {};
+
+                    bulkItems.forEach(item => {
+                        if (!votosData[item.city_slug]) {
+                            votosData[item.city_slug] = [];
+                        }
+                        // Verifica se já existe entrada para esse ano
+                        const existingIndex = votosData[item.city_slug].findIndex(v => v.ano === item.ano);
+                        if (existingIndex >= 0) {
+                            // Soma votos se mesmo ano
+                            votosData[item.city_slug][existingIndex].votos += item.votos;
+                        } else {
+                            votosData[item.city_slug].push({
+                                ano: item.ano,
+                                votos: item.votos
+                            });
+                        }
+                    });
+
+                    // Ordena cada cidade por ano
+                    Object.keys(votosData).forEach(slug => {
+                        votosData[slug].sort((a, b) => a.ano - b.ano);
+                    });
+
+                    // Atualiza campaignData com total de votos (soma de todos os anos)
+                    Object.keys(votosData).forEach(slug => {
+                        const totalVotos = votosData[slug].reduce((sum, v) => sum + v.votos, 0);
+                        if (!campaignData[slug]) {
+                            campaignData[slug] = { votes: 0, money: 0 };
+                        }
+                        campaignData[slug].votes = totalVotos;
+                    });
+
+                    // Também envia pro backend (formato adaptado para manter compatibilidade)
+                    const backendItems = Object.keys(votosData).map(slug => ({
+                        city_slug: slug,
+                        votes: campaignData[slug].votes,
+                        money: campaignData[slug].money || 0
+                    }));
+
                     const res = await fetch('http://localhost:8082/api/campaign/update_bulk', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ items: bulkItems })
+                        body: JSON.stringify({ items: backendItems })
                     });
 
+                    // Também salva votosData no backend
+                    await fetch('/api/votos/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ votos: votosData })
+                    }).catch(e => console.log('Backend votos save optional'));
+
                     if (res.ok) {
-                        alert(`Sucesso! ${bulkItems.length} cidades atualizadas.`);
-                        // Recarrega dados
+                        const totalCities = Object.keys(votosData).length;
+                        const totalEntries = bulkItems.length;
+                        alert(`Sucesso! ${totalEntries} registros importados para ${totalCities} cidades.`);
+
+                        // Recarrega dados globais
                         loadCampaignGlobalStats();
-                        // Se tiver cidade aberta, atualiza sidebar
+
+                        // Se tiver cidade aberta, atualiza sidebar incluindo aba de votos
                         if (activeCityId) {
                             populateSidebar(activeCityId);
+                            updateVotosTab(activeCityId);
                         }
                         updateMapDisplay();
 
-                        // Fecha modal de importação se estiver aberto (já deve estar fechado pelo ENTENDI, mas garante)
+                        // Fecha modal de importação
                         document.getElementById('import-modal').classList.add('hidden');
 
                     } else {
@@ -2593,6 +2649,22 @@ ${cityInvestments || ''}
             // Replace existing data with new data (overwrite)
             if (imported > 0) {
                 investmentsData = newInvestments;
+                window.investmentsData = newInvestments; // Atualiza global para filtros
+
+                // Atualiza campaignData.money com totais de investimentos
+                // Primeiro limpa apenas os valores de money (não afeta votes)
+                Object.keys(campaignData).forEach(slug => {
+                    campaignData[slug].money = 0;
+                });
+
+                // Recalcula totais de investimentos por cidade
+                newInvestments.forEach(inv => {
+                    const slug = inv.cityId;
+                    if (!campaignData[slug]) {
+                        campaignData[slug] = { votes: 0, money: 0 };
+                    }
+                    campaignData[slug].money += inv.valor || 0;
+                });
 
                 // Save to server
                 const saved = await saveInvestmentsToServer();
@@ -2604,6 +2676,9 @@ ${cityInvestments || ''}
 
                 // Populate filters with unique values
                 populateInvestmentFilters();
+
+                // Atualiza mapa se estiver em visualização de investimentos
+                updateMapDisplay();
 
                 // Update current city view if open
                 if (activeCityId) {
@@ -2983,4 +3058,528 @@ ${cityInvestments || ''}
     initAnalyticsModal();
     initCityInvestmentFilters();
 
+    // ============================================
+    // SIDEBAR RESIZABLE FUNCTIONALITY
+    // ============================================
+
+    function initSidebarResize() {
+        const sidebar = document.getElementById('sidebar');
+        const resizeHandle = document.getElementById('sidebar-resize-handle');
+
+        if (!sidebar || !resizeHandle) return;
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        const minWidth = 300;
+        const maxWidth = 600;
+
+        // Mouse down on handle - start resizing
+        resizeHandle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = sidebar.offsetWidth;
+
+            sidebar.classList.add('resizing');
+            resizeHandle.classList.add('active');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        // Mouse move - resize if active
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            // Calculate new width (inverted because handle is on left side)
+            const deltaX = startX - e.clientX;
+            let newWidth = startWidth + deltaX;
+
+            // Clamp to min/max
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+
+            sidebar.style.width = newWidth + 'px';
+        });
+
+        // Mouse up - stop resizing
+        document.addEventListener('mouseup', () => {
+            if (!isResizing) return;
+
+            isResizing = false;
+            sidebar.classList.remove('resizing');
+            resizeHandle.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+
+        // Touch support for mobile
+        resizeHandle.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isResizing = true;
+            startX = e.touches[0].clientX;
+            startWidth = sidebar.offsetWidth;
+
+            sidebar.classList.add('resizing');
+            resizeHandle.classList.add('active');
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isResizing) return;
+
+            const deltaX = startX - e.touches[0].clientX;
+            let newWidth = startWidth + deltaX;
+
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+            sidebar.style.width = newWidth + 'px';
+        });
+
+        document.addEventListener('touchend', () => {
+            if (!isResizing) return;
+
+            isResizing = false;
+            sidebar.classList.remove('resizing');
+            resizeHandle.classList.remove('active');
+        });
+
+        console.log('Sidebar resize initialized');
+    }
+
+    // Initialize sidebar resize
+    initSidebarResize();
+
+    // ============================================
+    // VOTOS TAB MANAGEMENT
+    // ============================================
+
+    // Carrega votos do servidor e atualiza campaignData
+    async function loadVotosFromServer() {
+        try {
+            const response = await fetch('/api/votos/data');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.votos && Object.keys(data.votos).length > 0) {
+                    votosData = data.votos;
+                    console.log(`Votos carregados: ${Object.keys(votosData).length} cidades`);
+
+                    // Atualiza campaignData.votes com totais de votos
+                    Object.keys(votosData).forEach(slug => {
+                        const totalVotos = votosData[slug].reduce((sum, v) => sum + v.votos, 0);
+                        if (!campaignData[slug]) {
+                            campaignData[slug] = { votes: 0, money: 0 };
+                        }
+                        campaignData[slug].votes = totalVotos;
+                    });
+                }
+            }
+        } catch (error) {
+            console.log('Servidor não disponível para carregar votos');
+        }
+    }
+
+    // Inicializa carregamento de votos
+    loadVotosFromServer();
+
+    // Atualiza a aba Votos Recebidos para uma cidade
+    function updateVotosTab(cityId) {
+        const slug = cityId;
+        const cityVotos = votosData[slug] || [];
+
+        // Atualiza gráfico de evolução
+        updateVotosEvolucaoChart(cityVotos);
+
+        // Atualiza tabela de crescimento
+        updateVotosCrescimentoTable(cityVotos);
+    }
+
+    // Gráfico de Evolução Anual de Votos
+    function updateVotosEvolucaoChart(cityVotos) {
+        const ctx = document.getElementById('chart-votos-evolucao');
+        if (!ctx) return;
+
+        // Destroi gráfico anterior
+        if (chartVotosEvolucao) {
+            chartVotosEvolucao.destroy();
+            chartVotosEvolucao = null;
+        }
+
+        if (cityVotos.length === 0) {
+            return;
+        }
+
+        const labels = cityVotos.map(v => v.ano.toString());
+        const data = cityVotos.map(v => v.votos);
+
+        chartVotosEvolucao = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Votos',
+                    data: data,
+                    backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(37, 99, 235, 0.5)',
+                        borderWidth: 1,
+                        displayColors: false,
+                        callbacks: {
+                            label: function (context) {
+                                return context.raw.toLocaleString('pt-BR') + ' votos';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function (value) {
+                                if (value >= 1000) {
+                                    return (value / 1000).toFixed(0) + 'k';
+                                }
+                                return value;
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Tabela de Crescimento/Variação Anual (substituiu o gráfico de rosca)
+    function updateVotosCrescimentoTable(cityVotos) {
+        const table = document.getElementById('table-votos-crescimento');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        if (cityVotos.length < 2) {
+            // Não há dados suficientes para mostrar crescimento
+            tbody.innerHTML = '<tr><td colspan="4" class="no-data">Sem dados de comparação disponíveis.</td></tr>';
+            return;
+        }
+
+        // Calcula variação entre anos e popula tabela
+        let rows = '';
+
+        for (let i = 1; i < cityVotos.length; i++) {
+            const anoAnterior = cityVotos[i - 1];
+            const anoAtual = cityVotos[i];
+            const periodo = `${anoAnterior.ano} → ${anoAtual.ano}`;
+
+            let variacao = 0;
+            let varClass = 'variacao-neutra';
+            let varText = '0%';
+
+            if (anoAnterior.votos > 0) {
+                variacao = ((anoAtual.votos - anoAnterior.votos) / anoAnterior.votos) * 100;
+                if (variacao > 0) {
+                    varClass = 'variacao-positiva';
+                    varText = `+${variacao.toFixed(1)}%`;
+                } else if (variacao < 0) {
+                    varClass = 'variacao-negativa';
+                    varText = `${variacao.toFixed(1)}%`;
+                } else {
+                    varText = '0%';
+                }
+            }
+
+            rows += `
+                <tr>
+                    <td>${periodo}</td>
+                    <td>${anoAnterior.votos.toLocaleString('pt-BR')}</td>
+                    <td>${anoAtual.votos.toLocaleString('pt-BR')}</td>
+                    <td class="${varClass}">${varText}</td>
+                </tr>
+            `;
+        }
+
+        tbody.innerHTML = rows;
+    }
+
+    // Chamar updateVotosTab quando clicar na aba Votos
+    document.querySelectorAll('.tab-btn[data-tab="votos"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (activeCityId) {
+                updateVotosTab(activeCityId);
+            }
+        });
+    });
+
+    // ============================================
+    // FILTROS DE DADOS IMPORTADOS
+    // ============================================
+
+    const campaignFiltersEl = document.getElementById('campaign-filters');
+    const filterAnoEl = document.getElementById('filter-ano');
+    const filterAreaEl = document.getElementById('filter-area');
+    const filterTipoEl = document.getElementById('filter-tipo');
+
+    // Filtros ativos
+    let activeFilters = {
+        ano: 'all',
+        area: 'all',
+        tipo: 'all'
+    };
+
+    // Mostrar/esconder filtros baseado na visualização
+    function updateCampaignFiltersVisibility() {
+        if (!campaignFiltersEl) return;
+
+        const mode = visModeSelect ? visModeSelect.value : 'none';
+
+        // Mostrar filtros para visualizações de campanha
+        if (mode === 'heatmap-votes' || mode === 'heatmap-money') {
+            campaignFiltersEl.classList.remove('hidden');
+            populateCampaignFilters(mode);
+        } else {
+            campaignFiltersEl.classList.add('hidden');
+        }
+    }
+
+    // Popular dropdowns de filtros com valores únicos
+    function populateCampaignFilters(mode) {
+        const anos = new Set();
+        const areas = new Set();
+        const tipos = new Set();
+
+        if (mode === 'heatmap-votes') {
+            // Dados de votos - apenas tem ano
+            Object.values(votosData).forEach(cityVotos => {
+                cityVotos.forEach(v => {
+                    if (v.ano) anos.add(v.ano);
+                });
+            });
+        } else if (mode === 'heatmap-money') {
+            // Dados de investimentos - tem ano, area, tipo
+            // Busca do objeto global investmentsData
+            if (window.investmentsData && Array.isArray(window.investmentsData)) {
+                window.investmentsData.forEach(inv => {
+                    if (inv.ano) anos.add(inv.ano);
+                    if (inv.area) areas.add(inv.area);
+                    if (inv.tipo) tipos.add(inv.tipo);
+                });
+            }
+        }
+
+        // Popular Ano
+        if (filterAnoEl) {
+            const currentValue = filterAnoEl.value;
+            filterAnoEl.innerHTML = '<option value="all">Todos os Anos</option>';
+            [...anos].sort((a, b) => b - a).forEach(ano => {
+                const opt = document.createElement('option');
+                opt.value = ano;
+                opt.textContent = ano;
+                filterAnoEl.appendChild(opt);
+            });
+            filterAnoEl.value = currentValue || 'all';
+        }
+
+        // Popular Área (só para investimentos)
+        if (filterAreaEl) {
+            if (mode === 'heatmap-money') {
+                filterAreaEl.closest('.filter-group').style.display = '';
+                const currentValue = filterAreaEl.value;
+                filterAreaEl.innerHTML = '<option value="all">Todas as Áreas</option>';
+                [...areas].sort().forEach(area => {
+                    const opt = document.createElement('option');
+                    opt.value = area;
+                    opt.textContent = area;
+                    filterAreaEl.appendChild(opt);
+                });
+                filterAreaEl.value = currentValue || 'all';
+            } else {
+                filterAreaEl.closest('.filter-group').style.display = 'none';
+            }
+        }
+
+        // Popular Tipo (só para investimentos)
+        if (filterTipoEl) {
+            if (mode === 'heatmap-money') {
+                filterTipoEl.closest('.filter-group').style.display = '';
+                const currentValue = filterTipoEl.value;
+                filterTipoEl.innerHTML = '<option value="all">Todos os Tipos</option>';
+                [...tipos].sort().forEach(tipo => {
+                    const opt = document.createElement('option');
+                    opt.value = tipo;
+                    opt.textContent = tipo;
+                    filterTipoEl.appendChild(opt);
+                });
+                filterTipoEl.value = currentValue || 'all';
+            } else {
+                filterTipoEl.closest('.filter-group').style.display = 'none';
+            }
+        }
+    }
+
+    // Atualizar campaignData com dados filtrados
+    function applyDataFilters() {
+        const mode = visModeSelect ? visModeSelect.value : 'none';
+
+        // Reset campaignData temporariamente
+        const filteredCampaignData = {};
+
+        if (mode === 'heatmap-votes') {
+            // Filtrar votos por ano
+            Object.keys(votosData).forEach(slug => {
+                let totalVotos = 0;
+                votosData[slug].forEach(v => {
+                    if (activeFilters.ano === 'all' || v.ano.toString() === activeFilters.ano) {
+                        totalVotos += v.votos;
+                    }
+                });
+                if (!filteredCampaignData[slug]) {
+                    filteredCampaignData[slug] = { votes: 0, money: 0 };
+                }
+                filteredCampaignData[slug].votes = totalVotos;
+            });
+
+            // Atualiza campaignData global com votos filtrados
+            Object.keys(filteredCampaignData).forEach(slug => {
+                if (!campaignData[slug]) campaignData[slug] = { votes: 0, money: 0 };
+                campaignData[slug].votes = filteredCampaignData[slug].votes;
+            });
+
+        } else if (mode === 'heatmap-money') {
+            // Filtrar investimentos por ano, área e tipo
+            if (window.investmentsData && Array.isArray(window.investmentsData)) {
+                window.investmentsData.forEach(inv => {
+                    const matchAno = activeFilters.ano === 'all' || inv.ano.toString() === activeFilters.ano;
+                    const matchArea = activeFilters.area === 'all' || inv.area === activeFilters.area;
+                    const matchTipo = activeFilters.tipo === 'all' || inv.tipo === activeFilters.tipo;
+
+                    if (matchAno && matchArea && matchTipo) {
+                        const slug = inv.cityId;
+                        if (!filteredCampaignData[slug]) {
+                            filteredCampaignData[slug] = { votes: 0, money: 0 };
+                        }
+                        filteredCampaignData[slug].money += inv.valor || 0;
+                    }
+                });
+
+                // Atualiza campaignData global com investimentos filtrados
+                // Primeiro limpa os valores de money
+                Object.keys(campaignData).forEach(slug => {
+                    campaignData[slug].money = 0;
+                });
+                Object.keys(filteredCampaignData).forEach(slug => {
+                    if (!campaignData[slug]) campaignData[slug] = { votes: 0, money: 0 };
+                    campaignData[slug].money = filteredCampaignData[slug].money;
+                });
+            }
+        }
+
+        updateMapDisplay();
+    }
+
+    // Event listeners para filtros
+    if (filterAnoEl) {
+        filterAnoEl.addEventListener('change', () => {
+            activeFilters.ano = filterAnoEl.value;
+            applyDataFilters();
+        });
+    }
+
+    if (filterAreaEl) {
+        filterAreaEl.addEventListener('change', () => {
+            activeFilters.area = filterAreaEl.value;
+            applyDataFilters();
+        });
+    }
+
+    if (filterTipoEl) {
+        filterTipoEl.addEventListener('change', () => {
+            activeFilters.tipo = filterTipoEl.value;
+            applyDataFilters();
+        });
+    }
+
+    // Atualizar quando muda visualização
+    if (visModeSelect) {
+        visModeSelect.addEventListener('change', () => {
+            // Reset filtros ao mudar visualização
+            activeFilters = { ano: 'all', area: 'all', tipo: 'all' };
+            if (filterAnoEl) filterAnoEl.value = 'all';
+            if (filterAreaEl) filterAreaEl.value = 'all';
+            if (filterTipoEl) filterTipoEl.value = 'all';
+
+            updateCampaignFiltersVisibility();
+        });
+    }
+
+    // Reset filtros no botão Limpar Filtros
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', () => {
+            activeFilters = { ano: 'all', area: 'all', tipo: 'all' };
+            if (filterAnoEl) filterAnoEl.value = 'all';
+            if (filterAreaEl) filterAreaEl.value = 'all';
+            if (filterTipoEl) filterTipoEl.value = 'all';
+
+            if (campaignFiltersEl) campaignFiltersEl.classList.add('hidden');
+        });
+    }
+
+    // Carregar investimentos do servidor e atualiza campaignData
+    async function loadInvestmentsForFilters() {
+        try {
+            const response = await fetch('/api/investments/data');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.investments && data.investments.length > 0) {
+                    window.investmentsData = data.investments;
+                    console.log(`Investimentos para filtros: ${window.investmentsData.length} registros`);
+
+                    // Atualiza campaignData.money com totais de investimentos
+                    const investmentTotals = {};
+                    window.investmentsData.forEach(inv => {
+                        const slug = inv.cityId;
+                        if (!investmentTotals[slug]) {
+                            investmentTotals[slug] = 0;
+                        }
+                        investmentTotals[slug] += inv.valor || 0;
+                    });
+
+                    // Aplica os totais ao campaignData
+                    Object.keys(investmentTotals).forEach(slug => {
+                        if (!campaignData[slug]) {
+                            campaignData[slug] = { votes: 0, money: 0 };
+                        }
+                        campaignData[slug].money = investmentTotals[slug];
+                    });
+                }
+            }
+        } catch (error) {
+            console.log('Erro ao carregar investimentos para filtros');
+        }
+    }
+
+    // Inicializa carregamento de investimentos
+    loadInvestmentsForFilters();
+
 }); // End DOMContentLoaded Scope
+

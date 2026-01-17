@@ -1,38 +1,14 @@
 {
-  "maringa": {
-    "votes": 4000,
-    "money": 10.0
+  "alvorada_do_sul": {
+    "votes": 8000,
+    "money": 8000.0
   },
   "londrina": {
-    "votes": 5000,
-    "money": 0.0
+    "votes": 20500,
+    "money": 20500.0
   },
-  "bom_sucesso": {
-    "votes": 0,
-    "money": 0.0
-  },
-  "peabiru": {
-    "votes": 0,
-    "money": 0.0
-  },
-  "jataizinho": {
-    "votes": 0,
-    "money": 0.0
-  },
-  "abatia": {
-    "votes": 0,
-    "money": 0.0
-  },
-  "ortigueira": {
-    "votes": 0,
-    "money": 0.0
-  },
-  "curitiba": {
-    "votes": 100,
-    "money": 0.5
-  },
-  "cascavel": {
-    "votes": 25000,
-    "money": 1000.0
+  "maringa": {
+    "votes": 55000,
+    "money": 55000.0
   }
 }

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa Interativo do Paraná</title>
-    <link rel="stylesheet" href="styles.css?v=20260116i">
+    <link rel="stylesheet" href="styles.css?v=20260117a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -20,17 +20,8 @@
     <div class="app-container">
         <!-- Top Stats Bar (Admin Only) -->
         <div id="campaign-stats" class="campaign-stats hidden">
-            <div class="stat-item">
-                <span class="stat-label">Total Votos:</span>
-                <span id="global-votes" class="stat-value">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Investimento Total:</span>
-                <span id="global-money" class="stat-value">R$ 0,00</span>
-            </div>
-            <div class="header-divider"></div>
             <div class="admin-actions">
-                <button id="btn-summary" class="btn-icon" title="Tabela Resumo">📊 Ver Tabela</button>
+                <!-- Botão Ver Tabela removido a pedido do usuário -->
                 <div class="import-wrapper" style="display:inline-block;">
                     <input type="file" id="file-import" accept=".xlsx,.xls" hidden />
                     <button id="btn-import" class="btn-icon" title="Importar Excel Campanha">📂 Importar
@@ -93,6 +84,32 @@
                     <!-- Legenda das Visualizações (será populada pelo JS) -->
                     <div id="sidebar-legend-container" class="legend-box hidden"></div>
 
+                    <!-- Filtros de Dados Importados -->
+                    <div id="campaign-filters" class="campaign-filters-section hidden">
+                        <h4>Filtros de Dados</h4>
+
+                        <div class="filter-group">
+                            <label for="filter-ano">Ano</label>
+                            <select id="filter-ano">
+                                <option value="all">Todos os Anos</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="filter-area">Área</label>
+                            <select id="filter-area">
+                                <option value="all">Todas as Áreas</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="filter-tipo">Tipo</label>
+                            <select id="filter-tipo">
+                                <option value="all">Todos os Tipos</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <button id="reset-filters">Limpar Filtros</button>
                 </div>
             </aside>
@@ -118,7 +135,9 @@
             <div id="tooltip" class="tooltip hidden"></div>
 
             <!-- Details Sidebar/Modal (Right) -->
-            <aside id="sidebar" class="sidebar">
+            <aside id="sidebar" class="sidebar resizable">
+                <!-- Handle para redimensionar o sidebar -->
+                <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
                 <div class="sidebar-header">
                     <h2 id="city-name">Selecione uma cidade</h2>
                     <button id="close-sidebar" aria-label="Fechar">×</button>
@@ -127,73 +146,14 @@
 
                 <!-- Sistema de Abas -->
                 <div class="sidebar-tabs">
-                    <button class="tab-btn hidden" id="tab-btn-campaign" data-tab="campaign">Dados Campanha</button>
-                    <button class="tab-btn hidden" id="tab-btn-insights" data-tab="insights">Insights</button>
+                    <!-- Abas Dados Campanha e Insights removidas a pedido do usuário -->
                     <button class="tab-btn active" data-tab="info">Informações</button>
                     <button class="tab-btn" data-tab="eleitorado">Eleitorado</button>
                     <button class="tab-btn" data-tab="investimentos">Investimentos</button>
+                    <button class="tab-btn" data-tab="votos">Votos Recebidos</button>
                 </div>
 
-                <div class="tab-content" id="tab-campaign">
-                    <div id="campaign-form" class="campaign-form">
-                        <h3>🗳️ Dados de Campanha</h3>
-                        <div class="input-group">
-                            <label>Votos Recebidos:</label>
-                            <input type="number" id="input-votes" placeholder="0">
-                        </div>
-                        <div class="input-group">
-                            <label>Investimento (R$):</label>
-                            <input type="number" id="input-money" placeholder="0.00" step="0.01">
-                        </div>
-                        <button id="btn-save-campaign" class="btn-primary">Salvar Dados</button>
-                    </div>
-                </div>
-
-                <!-- Aba: Insights (Admin) -->
-                <div class="tab-content" id="tab-insights">
-                    <div class="insights-list">
-                        <div class="insight-item">
-                            <div class="label-group">
-                                <span class="label">Votos Recebidos:</span>
-                            </div>
-                            <span class="value" id="ins-votes">-</span>
-                        </div>
-                        <div class="insight-item">
-                            <div class="label-group">
-                                <span class="label">Investimento (R$):</span>
-                            </div>
-                            <span class="value" id="ins-money">-</span>
-                        </div>
-                        <div class="insight-item">
-                            <div class="label-group">
-                                <span class="label">Votos Convertidos (%):</span>
-                                <small class="desc">Votos recebidos / Total de eleitores da cidade</small>
-                            </div>
-                            <span class="value" id="ins-conversion">-</span>
-                        </div>
-                        <div class="insight-item">
-                            <div class="label-group">
-                                <span class="label">Investimento por Voto:</span>
-                                <small class="desc">Investimento / Votos recebidos</small>
-                            </div>
-                            <span class="value" id="ins-cost-vote">-</span>
-                        </div>
-                        <div class="insight-item">
-                            <div class="label-group">
-                                <span class="label">Investimento por Habitante:</span>
-                                <small class="desc">Investimento / População total da cidade</small>
-                            </div>
-                            <span class="value" id="ins-cost-pop">-</span>
-                        </div>
-                        <div class="insight-item">
-                            <div class="label-group">
-                                <span class="label">Participação (%):</span>
-                                <small class="desc">Votos da cidade / Total de votos da campanha</small>
-                            </div>
-                            <span class="value" id="ins-share">-</span>
-                        </div>
-                    </div>
-                </div>
+                <!-- Abas de Campanha e Insights removidas a pedido do usuário -->
 
                 <!-- Aba: Informações -->
                 <div class="tab-content active" id="tab-info">
@@ -320,6 +280,41 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Aba: Votos Recebidos -->
+                <div class="tab-content" id="tab-votos">
+                    <div class="votos-content">
+                        <!-- Gráfico de Evolução de Votos -->
+                        <div class="chart-section">
+                            <h4>📊 Evolução Anual de Votos</h4>
+                            <div class="chart-container">
+                                <canvas id="chart-votos-evolucao"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Tabela Comparativa de Crescimento -->
+                        <div class="votos-table-section">
+                            <h4>📈 Comparativo de Crescimento</h4>
+                            <div class="votos-table-container">
+                                <table id="table-votos-crescimento" class="votos-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Período</th>
+                                            <th>Votos Anterior</th>
+                                            <th>Votos Atual</th>
+                                            <th>Variação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="4" class="no-data">Sem dados de comparação disponíveis.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </aside>
             </aside>
         </div>
@@ -435,31 +430,37 @@
                     <table class="example-table">
                         <thead>
                             <tr>
-                                <th>Cidade</th>
-                                <th>Votos</th>
-                                <th>Investimento</th>
+                                <th>CIDADE</th>
+                                <th>ANO</th>
+                                <th>VOTOS</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td>Curitiba</td>
+                                <td>2024</td>
                                 <td>15000</td>
-                                <td>500000</td>
                             </tr>
                             <tr>
                                 <td>Londrina</td>
+                                <td>2024</td>
                                 <td>8000</td>
-                                <td>250000</td>
+                            </tr>
+                            <tr>
+                                <td>Curitiba</td>
+                                <td>2020</td>
+                                <td>12000</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <ul class="modal-list">
-                    <li>As colunas devem se chamar <strong>"Cidade"</strong>, <strong>"Votos"</strong> e
-                        <strong>"Investimento"</strong>.
+                    <li>As colunas devem se chamar <strong>"CIDADE"</strong>, <strong>"ANO"</strong> e
+                        <strong>"VOTOS"</strong>.
                     </li>
                     <li>O nome das cidades deve coincidir exatamente com o cadastro do sistema.</li>
+                    <li>Você pode importar múltiplos anos para a mesma cidade.</li>
                     <li>Cidades com nomes incorretos ou não cadastrados serão ignoradas.</li>
                 </ul>
 
@@ -621,7 +622,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260116m"></script>
+    <script src="script.js?v=20260117a"></script>
 </body>
 
 </html>

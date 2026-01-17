@@ -607,6 +607,88 @@ path.municipio:hover {
     transform: translateX(0);
 }
 
+/* --- Sidebar Resizable --- */
+.sidebar.resizable {
+    min-width: 300px;
+    max-width: 600px;
+    width: 360px;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar.resizable.resizing {
+    transition: none;
+    user-select: none;
+}
+
+/* Handle de Resize - Borda esquerda do sidebar */
+.sidebar-resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: ew-resize;
+    background: transparent;
+    z-index: 10;
+    transition: background 0.2s ease;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.active {
+    background: linear-gradient(135deg, var(--accent-color), #7c3aed);
+}
+
+.sidebar-resize-handle::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 3px;
+    height: 40px;
+    background: var(--border-color);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar-resize-handle:hover::before,
+.sidebar-resize-handle.active::before {
+    opacity: 1;
+    background: white;
+}
+
+/* Faz os elementos internos responderem ao tamanho */
+.sidebar.resizable .sidebar-content,
+.sidebar.resizable .tab-content {
+    width: 100%;
+}
+
+.sidebar.resizable .chart-container,
+.sidebar.resizable .chart-container-small {
+    width: 100%;
+    max-width: 100%;
+}
+
+.sidebar.resizable .details-list,
+.sidebar.resizable .eleitorado-content,
+.sidebar.resizable .investimentos-content {
+    width: 100%;
+}
+
+/* Tabs flexíveis */
+.sidebar.resizable .sidebar-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.sidebar.resizable .sidebar-tabs .tab-btn {
+    flex: 1 1 auto;
+    min-width: fit-content;
+    white-space: nowrap;
+}
+
 .sidebar-header {
     padding: 1.5rem;
     border-bottom: 1px solid var(--border-color);
@@ -2373,4 +2455,242 @@ path.municipio.highlight-filter:not(.active) {
 
 .btn-analytics:hover {
     opacity: 0.9;
+}
+
+/* ============================================
+   VOTOS RECEBIDOS TAB STYLES
+   ============================================ */
+
+.votos-content {
+    padding: 0.5rem;
+}
+
+.votos-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.votos-total-card,
+.votos-anos-card {
+    background: linear-gradient(135deg, var(--accent-color), #7c3aed);
+    padding: 1.25rem;
+    border-radius: 12px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.votos-total-card .total-label,
+.votos-anos-card .total-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+}
+
+.votos-total-card .total-value,
+.votos-anos-card .total-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Lista de votos por ano */
+.votos-list-section {
+    margin-top: 1.5rem;
+}
+
+.votos-list-section h4 {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.votos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.votos-list .no-data {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.voto-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.voto-item:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.voto-item .voto-ano {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.voto-item .voto-ano::before {
+    content: "📅";
+    font-size: 0.9rem;
+}
+
+.voto-item .voto-valor {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--accent-color);
+}
+
+/* Animação de destaque para novos dados */
+@keyframes votoHighlight {
+    0% {
+        background: rgba(37, 99, 235, 0.2);
+    }
+
+    100% {
+        background: var(--card-bg);
+    }
+}
+
+.voto-item.new {
+    animation: votoHighlight 1s ease-out;
+}
+
+/* Tabela de Comparativo de Crescimento */
+.votos-table-section {
+    margin-top: 1.5rem;
+}
+
+.votos-table-section h4 {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.votos-table-container {
+    overflow-x: auto;
+}
+
+.votos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.votos-table th,
+.votos-table td {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.votos-table th {
+    background: var(--bg-secondary);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+}
+
+.votos-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+.votos-table .no-data {
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 1.5rem;
+}
+
+/* Variação positiva/negativa */
+.variacao-positiva {
+    color: #16a34a;
+    font-weight: 600;
+}
+
+.variacao-negativa {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.variacao-neutra {
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   FILTROS DE DADOS IMPORTADOS (Sidebar Esquerda)
+   ============================================ */
+
+.campaign-filters-section {
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.campaign-filters-section h4 {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.campaign-filters-section .filter-group {
+    margin-bottom: 0.75rem;
+}
+
+.campaign-filters-section .filter-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.campaign-filters-section .filter-group select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.campaign-filters-section .filter-group select:hover {
+    border-color: var(--accent-color);
+}
+
+.campaign-filters-section .filter-group select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }

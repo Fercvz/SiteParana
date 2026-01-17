@@ -69,12 +69,7 @@ def save_campaign_data():
         print(f"Erro ao salvar campanha: {e}")
 
 # Carrega na inicialização
-if os.path.exists("campaign_data.json"):
-    try:
-        with open("campaign_data.json", "r", encoding="utf-8") as f:
-            CAMPAIGN_DATA = json.load(f)
-    except:
-        CAMPAIGN_DATA = {}
+# Carrega na inicialização será feito via rebuild_campaign_data() para consistência
 
 # --- Gerenciamento de Dados de Investimentos ---
 INVESTMENTS_DATA = []
@@ -95,6 +90,55 @@ if os.path.exists("investments_data.json"):
         print(f"Investimentos carregados: {len(INVESTMENTS_DATA)} registros")
     except:
         INVESTMENTS_DATA = []
+
+# --- Gerenciamento de Dados de Votos (por Cidade/Ano) ---
+VOTOS_DATA = {}  # { 'cidade-slug': [{ ano: 2024, votos: 15000 }, ...] }
+
+def save_votos_data():
+    try:
+        with open("votos_data.json", "w", encoding="utf-8") as f:
+            json.dump(VOTOS_DATA, f, indent=2, ensure_ascii=False)
+        print(f"Votos salvos: {len(VOTOS_DATA)} cidades")
+    except Exception as e:
+        print(f"Erro ao salvar votos: {e}")
+
+# Carrega votos na inicialização
+if os.path.exists("votos_data.json"):
+    try:
+        with open("votos_data.json", "r", encoding="utf-8") as f:
+            VOTOS_DATA = json.load(f)
+        print(f"Votos carregados: {len(VOTOS_DATA)} cidades")
+    except:
+
+        VOTOS_DATA = {}
+
+# --- Reconstrução de Dados Agregados (CAMPAIGN_DATA) ---
+def rebuild_campaign_data():
+    global CAMPAIGN_DATA
+    CAMPAIGN_DATA = {}
+    
+    # 1. Agrega Votos
+    for slug, entries in VOTOS_DATA.items():
+        if slug not in CAMPAIGN_DATA:
+            CAMPAIGN_DATA[slug] = {"votes": 0, "money": 0}
+        total = sum(e["votos"] for e in entries)
+        CAMPAIGN_DATA[slug]["votes"] = total
+        
+    # 2. Agrega Investimentos
+    for inv in INVESTMENTS_DATA:
+        slug = inv.get("cityId")
+        if not slug: continue
+        if slug not in CAMPAIGN_DATA:
+            CAMPAIGN_DATA[slug] = {"votes": 0, "money": 0}
+        
+        CAMPAIGN_DATA[slug]["money"] += inv.get("valor", 0)
+        
+    # Salva para consistência externa se necessário, mas a memória é a fonte da verdade
+    save_campaign_data()
+    print(f"Dados de campanha reconstruídos: {len(CAMPAIGN_DATA)} cidades.")
+
+# Executa reconstrução inicial
+rebuild_campaign_data()
 
 # --- Dados Globais (Carregados na inialização) ---
 CITIES_DATA = {}
@@ -259,7 +303,27 @@ async def save_investments(data: InvestmentsUpdate):
     global INVESTMENTS_DATA
     INVESTMENTS_DATA = [inv.dict() for inv in data.investments]
     save_investments_data()
+    rebuild_campaign_data() # Atualiza agregados
     return {"success": True, "count": len(INVESTMENTS_DATA)}
+
+# --- Endpoints de Votos (por Cidade/Ano) ---
+
+class VotosUpdate(BaseModel):
+    votos: dict  # { 'cidade-slug': [{ ano: int, votos: int }, ...] }
+
+@app.get("/api/votos/data")
+async def get_votos_data():
+    """Retorna todos os votos salvos por cidade/ano."""
+    return {"votos": VOTOS_DATA, "count": len(VOTOS_DATA)}
+
+@app.post("/api/votos/save")
+async def save_votos(data: VotosUpdate):
+    """Salva/sobrescreve todos os votos."""
+    global VOTOS_DATA
+    VOTOS_DATA = data.votos
+    save_votos_data()
+    rebuild_campaign_data() # Atualiza agregados
+    return {"success": True, "count": len(VOTOS_DATA)}
 
 # --- Exportação Excel (Backend) ---
 class ExportItem(BaseModel):
