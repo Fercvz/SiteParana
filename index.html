@@ -19,7 +19,7 @@
 
     <div class="app-container">
         <!-- Top Stats Bar (Admin Only) -->
-        <div id="campaign-stats" class="campaign-stats hidden">
+        <div id="campaign-stats" class="campaign-stats">
             <div class="admin-actions">
                 <!-- Botão Ver Tabela removido a pedido do usuário -->
                 <div class="import-wrapper" style="display:inline-block;">
@@ -35,6 +35,8 @@
                 </div>
                 <button id="btn-analytics" class="btn-icon btn-analytics" title="Dashboard de Investimentos">📈
                     Analytics</button>
+                <button id="btn-delete-data" class="btn-icon btn-delete" title="Limpar Dados do Sistema">🗑️
+                    Limpar Dados</button>
             </div>
         </div>
 
@@ -53,7 +55,6 @@
                     <datalist id="cities-list"></datalist>
                 </div>
 
-                <button id="login-btn" class="login-btn">Entrar</button>
                 <button id="theme-toggle" aria-label="Alternar Tema">🌙</button>
             </div>
         </header>
@@ -76,10 +77,9 @@
                         <select id="vis-mode">
                             <option value="none">Padrão</option>
                             <option value="party">Partidos Políticos</option>
-                            <option value="heatmap-pop"> Habitantes</option>
-                            <option value="heatmap-pib"> PIB per capita</option>
-                            <option value="heatmap-votes"> Campanha: Votos </option>
-                            <option value="heatmap-money"> Campanha: Investimento </option>
+                            <option value="heatmap-pop">Habitantes</option>
+                            <option value="heatmap-pib">PIB per capita</option>
+                            <option value="campaign-data">Dados de Campanha</option>
                         </select>
                     </div>
                 </div>
@@ -91,8 +91,16 @@
                     <div id="sidebar-legend-container" class="legend-box hidden"></div>
 
                     <!-- Filtros de Dados Importados -->
-                    <div id="campaign-filters" class="campaign-filters-section hidden">
+                    <div id="campaign-filters" class="campaign-filters-section">
                         <h4>Filtros de Dados</h4>
+
+                        <div class="filter-group">
+                            <label for="data-source-select">Visualizar</label>
+                            <select id="data-source-select">
+                                <option value="investments">Investimentos</option>
+                                <option value="votes">Votos</option>
+                            </select>
+                        </div>
 
                         <div class="filter-group">
                             <label for="filter-ano">Ano</label>
@@ -146,8 +154,8 @@
                 <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
                 <div class="sidebar-header">
                     <h2 id="city-name">Selecione uma cidade</h2>
-                    <button id="close-sidebar" aria-label="Fechar">×</button>
                     <div id="save-msg"></div>
+                    <button id="close-sidebar" aria-label="Fechar">×</button>
                 </div>
 
                 <!-- Sistema de Abas -->
@@ -299,7 +307,7 @@
                             </div>
                         </div>
 
-                        <!-- Tabela Comparativa de Crescimento -->
+                        <!-- Tabela Comparativo de Crescimento -->
                         <div class="votos-table-section">
                             <h4>📈 Comparativo de Crescimento</h4>
                             <div class="votos-table-container">
@@ -315,6 +323,28 @@
                                     <tbody>
                                         <tr>
                                             <td colspan="4" class="no-data">Sem dados de comparação disponíveis.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Nova Tabela: Participação do Eleitorado -->
+                        <div class="votos-table-section">
+                            <h4>🗳️ Participação do Eleitorado</h4>
+                            <div class="votos-table-container">
+                                <table id="table-participacao-eleitorado" class="votos-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ano</th>
+                                            <th>Votos Recebidos</th>
+                                            <th>Total de Eleitores</th>
+                                            <th>Participação (%)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="4" class="no-data">Sem dados disponíveis.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -341,7 +371,7 @@
                             </div>
                         </div>
 
-                        <!-- KPI Cards -->
+                        <!-- KPI Cards Existentes -->
                         <div class="insights-kpis-grid">
 
                             <div class="insight-kpi-card">
@@ -353,6 +383,26 @@
                                 <span class="kpi-icon">📊</span>
                                 <span class="kpi-label">Total Investido</span>
                                 <span class="kpi-value" id="kpi-total-inv">R$ 0,00</span>
+                            </div>
+
+                            <!-- Novos KPIs de Analytics -->
+                            <div class="insight-kpi-card kpi-analytics">
+                                <span class="kpi-icon">💰</span>
+                                <span class="kpi-label">Custo por Voto (CPV)</span>
+                                <span class="kpi-value" id="kpi-cpv">-</span>
+                                <span class="kpi-unit">R$/voto</span>
+                            </div>
+                            <div class="insight-kpi-card kpi-analytics">
+                                <span class="kpi-icon">⚡</span>
+                                <span class="kpi-label">Eficiência da Conversão</span>
+                                <span class="kpi-value" id="kpi-eficiencia-conversao">-</span>
+                                <span class="kpi-unit">votos/R$</span>
+                            </div>
+                            <div class="insight-kpi-card kpi-analytics">
+                                <span class="kpi-icon">👤</span>
+                                <span class="kpi-label">Investimento por Eleitor</span>
+                                <span class="kpi-value" id="kpi-inv-por-eleitor">-</span>
+                                <span class="kpi-unit">R$/eleitor</span>
                             </div>
                         </div>
 
@@ -369,12 +419,11 @@
                                             <th>Ano</th>
                                             <th>Votos</th>
                                             <th>Investimento</th>
-                                            <th>Votos/R$1.000</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td colspan="4" class="no-data">Sem dados disponíveis.</td>
+                                            <td colspan="3" class="no-data">Sem dados disponíveis.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -449,27 +498,7 @@
 
     </div>
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Acesso Administrativo</h2>
-                <button id="close-login">×</button>
-            </div>
-            <form id="login-form">
-                <div class="input-group">
-                    <label for="login-user">Usuário</label>
-                    <input type="text" id="login-user" required>
-                </div>
-                <div class="input-group">
-                    <label for="login-pass">Senha</label>
-                    <input type="password" id="login-pass" required>
-                </div>
-                <button type="submit" id="btn-perform-login" class="btn-primary">Entrar</button>
-                <p id="login-msg" class="error-msg"></p>
-            </form>
-        </div>
-    </div>
+
 
     <!-- Tabela Resumo Modal -->
     <div id="summary-modal" class="modal hidden">
@@ -570,6 +599,12 @@
                 <!-- Filtros Globais -->
                 <div class="analytics-filters">
                     <div class="filter-group">
+                        <label>Cidade</label>
+                        <select id="filter-global-cidade">
+                            <option value="all">Todas as Cidades</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
                         <label>Ano</label>
                         <select id="filter-global-ano">
                             <option value="all">Todos os Anos</option>
@@ -590,23 +625,60 @@
                     <button id="btn-apply-filters" class="btn-primary">Aplicar Filtros</button>
                 </div>
 
-                <!-- KPIs -->
-                <div class="analytics-kpis">
-                    <div class="kpi-card">
-                        <span class="kpi-label">Total Investido</span>
-                        <span class="kpi-value" id="kpi-total">R$ 0,00</span>
+                <!-- KPIs de Investimento -->
+                <div class="analytics-kpis-section">
+                    <h4>💰 Métricas de Investimento</h4>
+                    <div class="analytics-kpis">
+                        <div class="kpi-card">
+                            <span class="kpi-label">Total Investido</span>
+                            <span class="kpi-value" id="kpi-total">R$ 0,00</span>
+                        </div>
+                        <div class="kpi-card">
+                            <span class="kpi-label">Nº de Investimentos</span>
+                            <span class="kpi-value" id="kpi-count">0</span>
+                        </div>
+                        <div class="kpi-card">
+                            <span class="kpi-label">Cidades Beneficiadas</span>
+                            <span class="kpi-value" id="kpi-cities">0</span>
+                        </div>
+                        <div class="kpi-card">
+                            <span class="kpi-label">Média por Investimento</span>
+                            <span class="kpi-value" id="kpi-avg">R$ 0,00</span>
+                        </div>
                     </div>
-                    <div class="kpi-card">
-                        <span class="kpi-label">Nº de Investimentos</span>
-                        <span class="kpi-value" id="kpi-count">0</span>
-                    </div>
-                    <div class="kpi-card">
-                        <span class="kpi-label">Cidades Beneficiadas</span>
-                        <span class="kpi-value" id="kpi-cities">0</span>
-                    </div>
-                    <div class="kpi-card">
-                        <span class="kpi-label">Média por Investimento</span>
-                        <span class="kpi-value" id="kpi-avg">R$ 0,00</span>
+                </div>
+
+                <!-- KPIs de Votos e Eficiência -->
+                <div class="analytics-kpis-section">
+                    <h4>🗳️ Métricas de Votos e Eficiência</h4>
+                    <div class="analytics-kpis">
+                        <div class="kpi-card kpi-votos">
+                            <span class="kpi-label">Total de Votos</span>
+                            <span class="kpi-value" id="kpi-global-votos">0</span>
+                        </div>
+                        <div class="kpi-card kpi-votos">
+                            <span class="kpi-label">Total de Eleitores</span>
+                            <span class="kpi-value" id="kpi-global-eleitores">0</span>
+                        </div>
+                        <div class="kpi-card kpi-cpv">
+                            <span class="kpi-label">Custo por Voto (CPV)</span>
+                            <span class="kpi-value" id="kpi-global-cpv">R$ 0,00</span>
+                            <span class="kpi-unit">R$/voto</span>
+                        </div>
+                        <div class="kpi-card kpi-eficiencia">
+                            <span class="kpi-label">Eficiência da Conversão</span>
+                            <span class="kpi-value" id="kpi-global-eficiencia">0,00</span>
+                            <span class="kpi-unit">votos/R$</span>
+                        </div>
+                        <div class="kpi-card kpi-inv-eleitor">
+                            <span class="kpi-label">Invest. por Eleitor</span>
+                            <span class="kpi-value" id="kpi-global-inv-eleitor">R$ 0,00</span>
+                            <span class="kpi-unit">R$/eleitor</span>
+                        </div>
+                        <div class="kpi-card kpi-participacao">
+                            <span class="kpi-label">Participação Média</span>
+                            <span class="kpi-value" id="kpi-global-participacao">0,00%</span>
+                        </div>
                     </div>
                 </div>
 
@@ -705,6 +777,28 @@
 
                 <div class="modal-footer-center">
                     <button id="btn-confirm-import-investments" class="btn-primary">SELECIONAR ARQUIVO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" class="modal hidden">
+        <div class="modal-content delete-confirm-modal">
+            <div class="modal-body">
+                <div class="delete-warning">
+                    <p class="warning-title">ATENÇÃO: Esta ação é irreversível!</p>
+                    <p>Ao confirmar, você irá <strong>DELETAR permanentemente</strong>:</p>
+                    <ul>
+                        <li>🗃️ Todos os dados de <strong>INVESTIMENTOS</strong></li>
+                        <li>🗳️ Todos os dados de <strong>VOTOS</strong></li>
+                        <li>📊 Todas as métricas e cálculos derivados</li>
+                    </ul>
+                    <p class="restore-info">Os dados poderão ser restaurados importando novos arquivos Excel.</p>
+                </div>
+                <div class="delete-actions">
+                    <button id="btn-cancel-delete" class="btn-secondary">Cancelar</button>
+                    <button id="btn-confirm-delete" class="btn-danger">Confirmar Exclusão</button>
                 </div>
             </div>
         </div>

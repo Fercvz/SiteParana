@@ -16,10 +16,8 @@ from dotenv import load_dotenv
 # --- Configuração ---
 load_dotenv()
 
-# Recupera credenciais do ambiente ou usa valores padrão seguros (básico)
+# Configuração de credenciais removida (Acesso Aberto)
 API_KEY = os.getenv("OPENAI_API_KEY")
-ADMIN_USER = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "Map@Parana2024")
 
 app = FastAPI()
 
@@ -222,10 +220,7 @@ load_data()
 
 @app.post("/api/login")
 async def login(credentials: LoginRequest):
-    # Comparação segura com variáveis de ambiente
-    if credentials.username == ADMIN_USER and credentials.password == ADMIN_PASS:
-        return {"success": True, "token": "admin-token-secure"}
-    raise HTTPException(status_code=401, detail="Credenciais inválidas")
+    return {"success": True, "token": "admin-token-secure"}
 
 @app.get("/api/campaign/data")
 async def get_campaign_data():
@@ -324,6 +319,28 @@ async def save_votos(data: VotosUpdate):
     save_votos_data()
     rebuild_campaign_data() # Atualiza agregados
     return {"success": True, "count": len(VOTOS_DATA)}
+
+# --- DELETE Endpoints ---
+
+@app.delete("/api/investments")
+async def delete_investments():
+    """Deleta todos os investimentos."""
+    global INVESTMENTS_DATA
+    INVESTMENTS_DATA = []
+    save_investments_data()
+    rebuild_campaign_data()  # Atualiza agregados
+    print("Todos os investimentos foram deletados.")
+    return {"success": True, "message": "Investimentos deletados com sucesso"}
+
+@app.delete("/api/votos")
+async def delete_votos():
+    """Deleta todos os votos."""
+    global VOTOS_DATA
+    VOTOS_DATA = {}
+    save_votos_data()
+    rebuild_campaign_data()  # Atualiza agregados
+    print("Todos os votos foram deletados.")
+    return {"success": True, "message": "Votos deletados com sucesso"}
 
 # --- Exportação Excel (Backend) ---
 class ExportItem(BaseModel):

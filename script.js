@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Estado da Aplicação (Login removido/Aberto)
     // Estado da Aplicação
-    let isLoggedIn = false;
-    let authToken = null;
+    let isLoggedIn = true;
+    let authToken = 'admin-token-secure';
     let activeCityId = null;
     let citiesData = {};
     let campaignData = {};
@@ -193,12 +193,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadEleitoradoData(); // Carrega dados eleitorais
 
         // Novos Inicializadores de Campanha/Login
-        initLogin();
+        // initLogin(); // Removed login requirement
         await loadCampaignGlobalStats();
         initDraggableModals();
 
         // Initial Render
         updateMapDisplay();
+
+        // Ensure filters are visible on load
+        if (typeof updateCampaignFiltersVisibility === 'function') {
+            updateCampaignFiltersVisibility();
+        }
     }
 
     function setupThemeToggle() {
@@ -338,152 +343,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Auth & Campaign Logic ---
     function initLogin() {
-        const loginBtn = document.getElementById('login-btn');
-        const loginModal = document.getElementById('login-modal');
-        const closeLogin = document.getElementById('close-login');
-        const btnPerform = document.getElementById('btn-perform-login');
-
-        // Abre modal
-        if (loginBtn) {
-            loginBtn.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevent any weird default behaviors
-                if (isLoggedIn) {
-                    // Logout simples
-                    isLoggedIn = false;
-                    loginBtn.innerText = "Entrar";
-                    document.getElementById('campaign-stats').classList.add('hidden');
-
-                    // Esconde a aba de campanha
-                    const tabBtnCampaign = document.getElementById('tab-btn-campaign');
-                    if (tabBtnCampaign) {
-                        tabBtnCampaign.classList.add('hidden');
-                    }
-
-                    const tabBtnInsights = document.getElementById('tab-btn-insights');
-                    if (tabBtnInsights) {
-                        tabBtnInsights.classList.add('hidden');
-                    }
-
-                    const activeTab = document.querySelector('.tab-btn.active');
-                    if (activeTab && (activeTab.dataset.tab === 'campaign' || activeTab.dataset.tab === 'insights')) {
-                        document.querySelector('.tab-btn[data-tab="info"]').click();
-                    }
-
-                    toggleCampaignVisualizations(false);
-
-                    // Limpa campos de input para garantir
-                    document.getElementById('input-votes').value = "";
-                    document.getElementById('input-money').value = "";
-
-                    // Limpa textos de insights
-                    ['ins-votes', 'ins-money', 'ins-conversion', 'ins-cost-vote', 'ins-cost-pop', 'ins-share'].forEach(id => {
-                        const el = document.getElementById(id);
-                        if (el) el.innerText = "-";
-                    });
-
-                    alert("Você saiu do sistema.");
-                } else {
-                    loginModal.classList.remove('hidden');
-                    loginModal.style.display = ''; // Limpa inline style (setado/fechado por performLogin)
-                }
-            });
-        }
-
-        // Fecha modal
-        if (closeLogin) {
-            closeLogin.addEventListener('click', () => {
-                loginModal.classList.add('hidden');
-                document.getElementById('login-msg').innerText = "";
-            });
-        }
-
-        // Ação de Login (Form Submit - Robust "Enter" support)
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
-                e.preventDefault(); // Stop page reload
-                performLogin();
-            });
-        }
-
-        // Manual keyup removed
-
-        // Salvar Campanha
-        const btnSave = document.getElementById('btn-save-campaign');
-        if (btnSave) {
-            btnSave.addEventListener('click', saveCampaignData);
-        }
+        // Legado - Função mantida vazia para evitar erros de referência se chamadas existirem
     }
 
     async function performLogin() {
-        const user = (document.getElementById('login-user').value || '').trim();
-        const pass = (document.getElementById('login-pass').value || '').trim();
-        const msg = document.getElementById('login-msg');
-
-        // Feedback visual imediato
-        msg.innerText = "Verificando credenciais...";
-        msg.style.color = "var(--text-secondary)";
-
-        try {
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: user, password: pass })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                isLoggedIn = true;
-                authToken = data.token;
-
-                // Força o fechamento do modal
-                const modal = document.getElementById('login-modal');
-                if (modal) {
-                    modal.classList.add('hidden'); // CSS class
-                    modal.style.display = 'none';  // Inline styles fallback
-                }
-
-                document.getElementById('login-btn').innerText = "Sair";
-                document.getElementById('campaign-stats').classList.remove('hidden');
-                document.getElementById('campaign-stats').style.display = 'flex'; // Ensure visibility
-
-                // Exibe a aba de campanha
-                const tabBtnCampaign = document.getElementById('tab-btn-campaign');
-                if (tabBtnCampaign) {
-                    tabBtnCampaign.classList.remove('hidden');
-                    tabBtnCampaign.click(); // Auto-select tab
-                }
-
-                const tabBtnInsights = document.getElementById('tab-btn-insights');
-                if (tabBtnInsights) {
-                    tabBtnInsights.classList.remove('hidden');
-                }
-
-                // Limpa mensagem
-                msg.innerText = "";
-
-                // Atualiza UI se tiver cidade selecionada
-                if (activeCityId && typeof populateSidebar === 'function') {
-                    populateSidebar(activeCityId);
-                }
-
-                // Carrega dados globais
-                loadCampaignGlobalStats();
-                toggleCampaignVisualizations(true);
-
-            } else {
-                msg.style.color = "#ef4444"; // Red
-                if (res.status === 401) {
-                    msg.innerText = "Usuário ou senha incorretos.";
-                } else {
-                    msg.innerText = `Erro no servidor: ${res.status}`;
-                }
-            }
-        } catch (e) {
-            console.error(e);
-            msg.style.color = "#ef4444";
-            msg.innerText = "Erro de conexão. Verifique o terminal.";
-        }
+        // Legado - Função mantida vazia
     }
 
     async function loadCampaignGlobalStats() {
@@ -705,12 +569,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             dataField = 'habitantes';
         } else if (currentVisMode === 'heatmap-pib') {
             dataField = 'pib_per_capita';
-        } else if (currentVisMode === 'heatmap-votes') {
+        } else if (currentVisMode === 'campaign-data' || currentVisMode === 'heatmap-votes' || currentVisMode === 'heatmap-money') {
             useCampaignData = true;
-            campaignField = 'votes';
-        } else if (currentVisMode === 'heatmap-money') {
-            useCampaignData = true;
-            campaignField = 'money';
+
+            // Default to investments unless specified
+            let type = 'investments';
+            const dsSelect = document.getElementById('data-source-select');
+            if (dsSelect) type = dsSelect.value;
+
+            // Legacy overrides
+            if (currentVisMode === 'heatmap-votes') type = 'votes';
+            if (currentVisMode === 'heatmap-money') type = 'investments';
+
+            campaignField = (type === 'votes') ? 'votes' : 'money';
         }
 
         if (dataField || useCampaignData) {
@@ -2769,7 +2640,13 @@ ${cityInvestments || ''}
         const areas = [...new Set(investmentsData.map(i => i.area).filter(a => a))].sort();
         const tipos = [...new Set(investmentsData.map(i => i.tipo).filter(t => t))].sort();
 
+        // Get cities from investments AND votosData
+        const citiesFromInvestments = [...new Set(investmentsData.map(i => i.cityId))];
+        const citiesFromVotos = Object.keys(votosData);
+        const allCities = [...new Set([...citiesFromInvestments, ...citiesFromVotos])].sort();
+
         // Global filters
+        populateSelect('filter-global-cidade', allCities.map(c => ({ value: c, label: citiesData[c]?.nome || c })), 'Todas as Cidades');
         populateSelect('filter-global-ano', anos, 'Todos os Anos');
         populateSelect('filter-global-area', areas, 'Todas as Áreas');
         populateSelect('filter-global-tipo', tipos, 'Todos os Tipos');
@@ -2787,8 +2664,14 @@ ${cityInvestments || ''}
         select.innerHTML = `<option value="all">${defaultText}</option>`;
         options.forEach(opt => {
             const option = document.createElement('option');
-            option.value = opt;
-            option.textContent = opt;
+            // Support both simple values and objects with value/label
+            if (typeof opt === 'object' && opt.value !== undefined) {
+                option.value = opt.value;
+                option.textContent = opt.label || opt.value;
+            } else {
+                option.value = opt;
+                option.textContent = opt;
+            }
             select.appendChild(option);
         });
     }
@@ -2920,28 +2803,180 @@ ${cityInvestments || ''}
         }
     }
 
+    // Initialize Delete Data Button
+    function initDeleteDataButton() {
+        const btnDelete = document.getElementById('btn-delete-data');
+        const deleteModal = document.getElementById('delete-confirm-modal');
+        const btnCancel = document.getElementById('btn-cancel-delete');
+        const btnConfirm = document.getElementById('btn-confirm-delete');
+
+        if (!btnDelete || !deleteModal) return;
+
+        // Open modal when delete button is clicked
+        btnDelete.addEventListener('click', () => {
+            deleteModal.classList.remove('hidden');
+        });
+
+        // Close modal on cancel
+        if (btnCancel) {
+            btnCancel.addEventListener('click', () => {
+                deleteModal.classList.add('hidden');
+            });
+        }
+
+        // Close modal on outside click
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) {
+                deleteModal.classList.add('hidden');
+            }
+        });
+
+        // Confirm deletion
+        if (btnConfirm) {
+            btnConfirm.addEventListener('click', async () => {
+                try {
+                    // Disable button during operation
+                    btnConfirm.disabled = true;
+                    btnConfirm.textContent = 'Excluindo...';
+
+                    // Delete investments from server
+                    const invResponse = await fetch('/api/investments', {
+                        method: 'DELETE'
+                    });
+
+                    // Delete votes from server
+                    const votosResponse = await fetch('/api/votos', {
+                        method: 'DELETE'
+                    });
+
+                    if (invResponse.ok && votosResponse.ok) {
+                        // Clear local data
+                        investmentsData = [];
+                        votosData = {};
+
+                        // Close modal
+                        deleteModal.classList.add('hidden');
+
+                        alert('✅ Dados removidos com sucesso!\n\nA página será atualizada.');
+
+                        // Reload the page to ensure all data is refreshed
+                        window.location.reload();
+                    } else {
+                        throw new Error('Falha ao deletar dados do servidor');
+                    }
+                } catch (error) {
+                    console.error('Erro ao deletar dados:', error);
+                    alert('❌ Erro ao deletar dados.\n\nTente novamente.');
+                    btnConfirm.disabled = false;
+                    btnConfirm.textContent = 'Confirmar Exclusão';
+                }
+            });
+        }
+    }
+
     // Update Analytics Dashboard
     function updateAnalyticsDashboard() {
+        const filterCidade = document.getElementById('filter-global-cidade')?.value || 'all';
         const filterAno = document.getElementById('filter-global-ano')?.value || 'all';
         const filterArea = document.getElementById('filter-global-area')?.value || 'all';
         const filterTipo = document.getElementById('filter-global-tipo')?.value || 'all';
 
-        // Apply filters
+        // Apply filters to investments
         let filtered = investmentsData;
+        if (filterCidade !== 'all') filtered = filtered.filter(i => i.cityId === filterCidade);
         if (filterAno !== 'all') filtered = filtered.filter(i => i.ano == filterAno);
         if (filterArea !== 'all') filtered = filtered.filter(i => i.area === filterArea);
         if (filterTipo !== 'all') filtered = filtered.filter(i => i.tipo === filterTipo);
 
-        // Update KPIs
-        const total = filtered.reduce((sum, i) => sum + i.valor, 0);
+        // Update Investment KPIs
+        const totalInvestido = filtered.reduce((sum, i) => sum + i.valor, 0);
         const count = filtered.length;
-        const cities = new Set(filtered.map(i => i.cityId)).size;
-        const avg = count > 0 ? total / count : 0;
+        const citiesSet = new Set(filtered.map(i => i.cityId));
+        const citiesCount = citiesSet.size;
+        const avg = count > 0 ? totalInvestido / count : 0;
 
-        document.getElementById('kpi-total').textContent = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('kpi-total').textContent = `R$ ${totalInvestido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         document.getElementById('kpi-count').textContent = count;
-        document.getElementById('kpi-cities').textContent = cities;
+        document.getElementById('kpi-cities').textContent = citiesCount;
         document.getElementById('kpi-avg').textContent = `R$ ${avg.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+        // ============================================
+        // CALCULATE VOTES AND EFFICIENCY METRICS
+        // ============================================
+
+        // Get relevant cities based on filter
+        let relevantCityIds = filterCidade !== 'all' ? [filterCidade] : [...citiesSet];
+        if (filterCidade === 'all' && relevantCityIds.length === 0) {
+            // If no investments, consider all cities with votes
+            relevantCityIds = Object.keys(votosData);
+        }
+
+        // Calculate total votes (filtered by year if applicable)
+        let totalVotos = 0;
+        relevantCityIds.forEach(cityId => {
+            const cityVotos = votosData[cityId] || [];
+            if (filterAno !== 'all') {
+                const votosAno = cityVotos.find(v => v.ano == filterAno);
+                totalVotos += votosAno ? votosAno.votos : 0;
+            } else {
+                totalVotos += cityVotos.reduce((sum, v) => sum + (v.votos || 0), 0);
+            }
+        });
+
+        // Calculate total eleitores
+        let totalEleitores = 0;
+        relevantCityIds.forEach(cityId => {
+            const key = cityId.toLowerCase().trim().replace(/-/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (eleitoradoData[key]) {
+                totalEleitores += eleitoradoData[key].total_eleitores || 0;
+            }
+        });
+
+        // Update Votes KPIs
+        document.getElementById('kpi-global-votos').textContent = totalVotos.toLocaleString('pt-BR');
+        document.getElementById('kpi-global-eleitores').textContent = totalEleitores.toLocaleString('pt-BR');
+
+        // CPV = investimento / votos
+        const kpiCpv = document.getElementById('kpi-global-cpv');
+        if (totalVotos === 0) {
+            kpiCpv.textContent = 'Indisponível';
+        } else if (totalInvestido === 0) {
+            kpiCpv.textContent = 'R$ 0,00';
+        } else {
+            const cpv = totalInvestido / totalVotos;
+            kpiCpv.textContent = `R$ ${cpv.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // Eficiência = votos / investimento
+        const kpiEficiencia = document.getElementById('kpi-global-eficiencia');
+        if (totalVotos === 0) {
+            kpiEficiencia.textContent = 'Indisponível';
+        } else if (totalInvestido === 0) {
+            kpiEficiencia.textContent = '∞';
+        } else {
+            const eficiencia = totalVotos / totalInvestido;
+            kpiEficiencia.textContent = eficiencia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Investimento por Eleitor
+        const kpiInvEleitor = document.getElementById('kpi-global-inv-eleitor');
+        if (totalEleitores === 0) {
+            kpiInvEleitor.textContent = 'Indisponível';
+        } else if (totalInvestido === 0) {
+            kpiInvEleitor.textContent = 'R$ 0,00';
+        } else {
+            const invPorEleitor = totalInvestido / totalEleitores;
+            kpiInvEleitor.textContent = `R$ ${invPorEleitor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // Participação Média = votos / eleitores
+        const kpiParticipacao = document.getElementById('kpi-global-participacao');
+        if (totalEleitores === 0 || totalVotos === 0) {
+            kpiParticipacao.textContent = 'Indisponível';
+        } else {
+            const participacao = (totalVotos / totalEleitores) * 100;
+            kpiParticipacao.textContent = `${participacao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+        }
 
         // Update charts
         updateGlobalCharts(filtered);
@@ -3127,6 +3162,7 @@ ${cityInvestments || ''}
     // Initialize investment system
     initInvestmentImport();
     initAnalyticsModal();
+    initDeleteDataButton();
     initCityInvestmentFilters();
 
     // ============================================
@@ -3261,6 +3297,65 @@ ${cityInvestments || ''}
 
         // Atualiza tabela de crescimento
         updateVotosCrescimentoTable(cityVotos);
+
+        // Atualiza tabela de participação do eleitorado
+        updateParticipacaoEleitoradoTable(cityId, cityVotos);
+    }
+
+    // Tabela de Participação do Eleitorado (Share de Votos)
+    function updateParticipacaoEleitoradoTable(cityId, cityVotos) {
+        const table = document.getElementById('table-participacao-eleitorado');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        // Obtém total de eleitores da cidade
+        let eleitores = 0;
+        const key = cityId.toLowerCase().trim().replace(/-/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (eleitoradoData[key]) {
+            eleitores = eleitoradoData[key].total_eleitores || 0;
+        }
+
+        if (cityVotos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="no-data">Sem dados de votos disponíveis.</td></tr>';
+            return;
+        }
+
+        if (eleitores === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="no-data">Dados eleitorais indisponíveis para esta cidade.</td></tr>';
+            return;
+        }
+
+        let rows = '';
+
+        // Ordena por ano (mais recente primeiro)
+        const votosOrdenados = [...cityVotos].sort((a, b) => b.ano - a.ano);
+
+        votosOrdenados.forEach(v => {
+            const votos = v.votos || 0;
+            const participacao = eleitores > 0 ? (votos / eleitores) * 100 : 0;
+
+            let participacaoClass = '';
+            if (participacao >= 10) {
+                participacaoClass = 'variacao-positiva';
+            } else if (participacao >= 5) {
+                participacaoClass = 'variacao-neutra';
+            } else {
+                participacaoClass = 'variacao-negativa';
+            }
+
+            rows += `
+                <tr>
+                    <td>${v.ano}</td>
+                    <td>${votos.toLocaleString('pt-BR')}</td>
+                    <td>${eleitores.toLocaleString('pt-BR')}</td>
+                    <td class="${participacaoClass}">${participacao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = rows;
     }
 
     // Gráfico de Evolução Anual de Votos
@@ -3499,22 +3594,94 @@ ${cityInvestments || ''}
         }
 
         // Get city votes
-        const cityVotos = votosData[cityId] || [];
+        let cityVotos = votosData[cityId] || [];
 
-        // Calculate totals
+        // Apply year filter to votes as well
+        if (insightsFilters.ano !== 'all') {
+            cityVotos = cityVotos.filter(v => v.ano == insightsFilters.ano);
+        }
+
+        // Calculate totals (filtered)
         const totalInvestido = cityInvestments.reduce((sum, i) => sum + (i.valor || 0), 0);
         const totalVotos = cityVotos.reduce((sum, v) => sum + (v.votos || 0), 0);
-        const invPorHabitante = habitantes > 0 ? totalInvestido / habitantes : 0;
 
-        // Update KPI Cards
-        // Removed: kpi-inv-habitante
+        // Get total de eleitores from eleitoradoData
+        let totalEleitores = 0;
+        const key = cityId.toLowerCase().trim().replace(/-/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (eleitoradoData[key]) {
+            totalEleitores = eleitoradoData[key].total_eleitores || 0;
+        }
+
+        // Determinar qual valor de votos usar para os cálculos
+        // Se nenhum filtro de ano está aplicado, usa o total de votos
+        // Se um ano específico está selecionado, usa os votos daquele ano (que já está filtrado em cityVotos)
+        let votosParaCalculo = totalVotos;
+
+        // Se um ano específico está filtrado, usa os votos filtrados (totalVotos já contempla)
+        // Se não há filtro (todos os anos), também usa totalVotos
+        // Nota: totalVotos = soma de todos os votos filtrados (ou todos se não há filtro)
+
+        // Update KPI Cards (Existentes)
         document.getElementById('kpi-total-votos').textContent =
             totalVotos.toLocaleString('pt-BR');
         document.getElementById('kpi-total-inv').textContent =
             `R$ ${totalInvestido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+        // ============================================
+        // NOVOS KPIs DE ANALYTICS
+        // ============================================
+
+        const kpiCpv = document.getElementById('kpi-cpv');
+        const kpiEficiencia = document.getElementById('kpi-eficiencia-conversao');
+        const kpiInvPorEleitor = document.getElementById('kpi-inv-por-eleitor');
+
+        // 1) Custo por Voto (CPV) = investimento_total / votos_totais (filtrados)
+        if (kpiCpv) {
+            if (votosParaCalculo === 0) {
+                kpiCpv.textContent = 'Indisponível';
+                kpiCpv.title = 'Sem votos registrados';
+            } else if (totalInvestido === 0) {
+                kpiCpv.textContent = 'R$ 0,00';
+                kpiCpv.title = 'Sem investimento registrado';
+            } else {
+                const cpv = totalInvestido / votosParaCalculo;
+                kpiCpv.textContent = `R$ ${cpv.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                kpiCpv.title = `Custo para obter cada voto: R$ ${cpv.toFixed(2)}`;
+            }
+        }
+
+        // 2) Eficiência da Conversão = votos_totais / investimento_total (filtrados)
+        if (kpiEficiencia) {
+            if (votosParaCalculo === 0) {
+                kpiEficiencia.textContent = 'Indisponível';
+                kpiEficiencia.title = 'Sem votos registrados';
+            } else if (totalInvestido === 0) {
+                kpiEficiencia.textContent = '∞';
+                kpiEficiencia.title = 'Sem investimento (eficiência infinita)';
+            } else {
+                const eficiencia = votosParaCalculo / totalInvestido;
+                // Exibir como votos por R$1 investido (2 casas decimais)
+                kpiEficiencia.textContent = eficiencia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                kpiEficiencia.title = `${eficiencia.toFixed(2)} votos obtidos para cada R$1,00 investido`;
+            }
+        }
+
+        // 3) Investimento por Eleitor = investimento_total_cidade / eleitores_totais
+        if (kpiInvPorEleitor) {
+            if (totalEleitores === 0) {
+                kpiInvPorEleitor.textContent = 'Indisponível';
+                kpiInvPorEleitor.title = 'Dados eleitorais não disponíveis';
+            } else if (totalInvestido === 0) {
+                kpiInvPorEleitor.textContent = 'R$ 0,00';
+                kpiInvPorEleitor.title = 'Sem investimento registrado';
+            } else {
+                const invPorEleitor = totalInvestido / totalEleitores;
+                kpiInvPorEleitor.textContent = `R$ ${invPorEleitor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                kpiInvPorEleitor.title = `Investimento médio por eleitor: R$ ${invPorEleitor.toFixed(2)}`;
+            }
+        }
+
         // Update Votos/Investimento por Ano
-        // Removed: updateEficienciaChart(cityInvestments, cityVotos);
         updateEficienciaTable(cityInvestments, cityVotos);
 
         // Update % por Área
@@ -3634,7 +3801,7 @@ ${cityInvestments || ''}
             .sort((a, b) => b - a);
 
         if (allYears.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="no-data">Sem dados disponíveis.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="no-data">Sem dados disponíveis.</td></tr>';
             return;
         }
 
@@ -3642,20 +3809,12 @@ ${cityInvestments || ''}
         allYears.forEach(ano => {
             const inv = invByYear[ano] || 0;
             const vot = votosByYear[ano] || 0;
-            const efficiency = inv > 0 ? (vot / inv) * 1000 : 0;
-
-            // Determine efficiency class
-            let efClass = '';
-            if (efficiency > 5) efClass = 'eficiencia-alta';
-            else if (efficiency > 1) efClass = 'eficiencia-media';
-            else if (efficiency > 0) efClass = 'eficiencia-baixa';
 
             rows += `
-                <tr class="${efClass}">
+                <tr>
                     <td>${ano}</td>
                     <td>${vot.toLocaleString('pt-BR')}</td>
                     <td class="valor-cell">R$ ${inv.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td><strong>${efficiency.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                 </tr>
             `;
         });
@@ -3794,6 +3953,7 @@ ${cityInvestments || ''}
     // ============================================
 
     const campaignFiltersEl = document.getElementById('campaign-filters');
+    const dataSourceSelect = document.getElementById('data-source-select');
     const filterAnoEl = document.getElementById('filter-ano');
     const filterAreaEl = document.getElementById('filter-area');
     const filterTipoEl = document.getElementById('filter-tipo');
@@ -3809,14 +3969,31 @@ ${cityInvestments || ''}
     function updateCampaignFiltersVisibility() {
         if (!campaignFiltersEl) return;
 
+        // Sempre mostrar os filtros de dados
+        campaignFiltersEl.classList.remove('hidden');
+
         const mode = visModeSelect ? visModeSelect.value : 'none';
 
-        // Mostrar filtros para visualizações de campanha
-        if (mode === 'heatmap-votes' || mode === 'heatmap-money') {
-            campaignFiltersEl.classList.remove('hidden');
-            populateCampaignFilters(mode);
+        let dataSource = 'investments';
+        if (dataSourceSelect) {
+            dataSource = dataSourceSelect.value;
+        }
+
+        // Compatibilidade com modos legados
+        if (mode === 'heatmap-votes') dataSource = 'votes';
+        if (mode === 'heatmap-money') dataSource = 'investments';
+
+        // Atualizar visibilidade dos dropdowns específicos
+        if (dataSource === 'votes') {
+            // Votos só tem Ano. Esconde Area e Tipo.
+            if (filterAreaEl && filterAreaEl.parentElement) filterAreaEl.parentElement.classList.add('hidden');
+            if (filterTipoEl && filterTipoEl.parentElement) filterTipoEl.parentElement.classList.add('hidden');
+            populateCampaignFilters('heatmap-votes');
         } else {
-            campaignFiltersEl.classList.add('hidden');
+            // Investimentos tem tudo.
+            if (filterAreaEl && filterAreaEl.parentElement) filterAreaEl.parentElement.classList.remove('hidden');
+            if (filterTipoEl && filterTipoEl.parentElement) filterTipoEl.parentElement.classList.remove('hidden');
+            populateCampaignFilters('heatmap-money');
         }
     }
 
@@ -3956,6 +4133,17 @@ ${cityInvestments || ''}
     }
 
     // Event listeners para filtros
+
+    if (dataSourceSelect) {
+        dataSourceSelect.addEventListener('change', () => {
+            updateCampaignFiltersVisibility();
+            // Força atualização da visualização se estivermos no modo "campanha"
+            // Mas updateMapDisplay lê a config. Vamos ter que alterar updateMapDisplay primeiro
+            // ou garantir que ele olhe para este select.
+            updateMapDisplay();
+        });
+    }
+
     if (filterAnoEl) {
         filterAnoEl.addEventListener('change', () => {
             activeFilters.ano = filterAnoEl.value;
@@ -4011,6 +4199,9 @@ ${cityInvestments || ''}
                 if (data.investments && data.investments.length > 0) {
                     window.investmentsData = data.investments;
                     console.log(`Investimentos para filtros: ${window.investmentsData.length} registros`);
+
+                    // Atualizar dropdowns agora que temos dados
+                    updateCampaignFiltersVisibility();
 
                     // Atualiza campaignData.money com totais de investimentos
                     const investmentTotals = {};
