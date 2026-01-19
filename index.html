@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa Interativo do Paraná</title>
-    <link rel="stylesheet" href="styles.css?v=20260117f">
+    <link rel="stylesheet" href="styles.css?v=20260119mobile16">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -63,13 +63,26 @@
         <div class="main-content">
 
             <!-- Mobile Toggle Button for Filters -->
-            <button id="toggle-filters-btn" aria-label="Abrir Filtros">☰</button>
+            <button id="toggle-filters-btn" aria-label="Abrir Filtros">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    style="pointer-events: none;">
+                    <path d="M4 6H20M4 12H20M4 18H20" stroke="white" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </button>
 
             <!-- Mobile Overlay -->
             <div id="mobile-overlay" class="mobile-overlay"></div>
 
             <!-- Left Sidebar (Filters) -->
             <aside class="left-sidebar" id="left-sidebar">
+
+                <!-- Mobile Header with Close Button -->
+                <div class="left-sidebar-mobile-header">
+                    <span class="mobile-sidebar-title">Filtros</span>
+                    <button id="close-left-sidebar" class="close-left-sidebar-btn"
+                        aria-label="Fechar filtros">×</button>
+                </div>
 
                 <div class="sidebar-section visualization">
                     <h3>Visualização</h3>

@@ -225,37 +225,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         const toggleBtn = document.getElementById('toggle-filters-btn');
         const leftSidebar = document.getElementById('left-sidebar');
         const mobileOverlay = document.getElementById('mobile-overlay');
+        const closeSidebarBtn = document.getElementById('close-left-sidebar');
 
         if (!toggleBtn || !leftSidebar) return;
+
+        // Function to close the sidebar
+        function closeSidebar() {
+            leftSidebar.classList.remove('open');
+            toggleBtn.classList.remove('active');
+            toggleBtn.innerHTML = '☰';
+            toggleBtn.setAttribute('aria-label', 'Abrir Filtros');
+            if (mobileOverlay) mobileOverlay.classList.remove('visible');
+        }
+
+        // Function to open the sidebar
+        function openSidebar() {
+            leftSidebar.classList.add('open');
+            toggleBtn.classList.add('active');
+            toggleBtn.innerHTML = '☰'; // Keep hamburger icon (no X)
+            toggleBtn.setAttribute('aria-label', 'Fechar Filtros');
+            if (mobileOverlay) mobileOverlay.classList.add('visible');
+        }
 
         // Toggle sidebar when button is clicked
         toggleBtn.addEventListener('click', () => {
             const isOpen = leftSidebar.classList.contains('open');
-
             if (isOpen) {
-                leftSidebar.classList.remove('open');
-                toggleBtn.classList.remove('active');
-                toggleBtn.innerHTML = '☰';
-                toggleBtn.setAttribute('aria-label', 'Abrir Filtros');
-                if (mobileOverlay) mobileOverlay.classList.remove('visible');
+                closeSidebar();
             } else {
-                leftSidebar.classList.add('open');
-                toggleBtn.classList.add('active');
-                toggleBtn.innerHTML = '✕';
-                toggleBtn.setAttribute('aria-label', 'Fechar Filtros');
-                if (mobileOverlay) mobileOverlay.classList.add('visible');
+                openSidebar();
             }
         });
 
+        // Close sidebar when X button is clicked
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', closeSidebar);
+        }
+
         // Close sidebar when overlay is clicked
         if (mobileOverlay) {
-            mobileOverlay.addEventListener('click', () => {
-                leftSidebar.classList.remove('open');
-                toggleBtn.classList.remove('active');
-                toggleBtn.innerHTML = '☰';
-                toggleBtn.setAttribute('aria-label', 'Abrir Filtros');
-                mobileOverlay.classList.remove('visible');
-            });
+            mobileOverlay.addEventListener('click', closeSidebar);
         }
 
         // Close sidebar when a filter is selected (better UX on mobile)
@@ -265,10 +274,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Small delay to let the user see the selection
                 setTimeout(() => {
                     if (window.innerWidth <= 768) {
-                        leftSidebar.classList.remove('open');
-                        toggleBtn.classList.remove('active');
-                        toggleBtn.innerHTML = '☰';
-                        if (mobileOverlay) mobileOverlay.classList.remove('visible');
+                        closeSidebar();
                     }
                 }, 300);
             });
@@ -277,10 +283,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Handle window resize - close sidebar if window is enlarged
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
-                leftSidebar.classList.remove('open');
-                toggleBtn.classList.remove('active');
-                toggleBtn.innerHTML = '☰';
-                if (mobileOverlay) mobileOverlay.classList.remove('visible');
+                closeSidebar();
             }
         });
     }
