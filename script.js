@@ -1544,6 +1544,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (mapGroup) mapGroup.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
         };
 
+        // --- Mouse Events ---
         mapContainer.addEventListener('mousedown', e => {
             isDragging = true;
             startX = e.clientX - pointX;
@@ -1558,6 +1559,71 @@ document.addEventListener('DOMContentLoaded', async () => {
             pointY = e.clientY - startY;
             updateTransform();
         });
+
+        // --- Touch Events (Mobile) ---
+        let lastTouchDist = -1;
+
+        mapContainer.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                // Single touch: Pan
+                isDragging = true;
+                startX = e.touches[0].clientX - pointX;
+                startY = e.touches[0].clientY - pointY;
+            } else if (e.touches.length === 2) {
+                // Multi touch: Zoom (Pinch)
+                isDragging = false;
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                lastTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            }
+        }, { passive: false });
+
+        mapContainer.addEventListener('touchmove', e => {
+            if (e.touches.length === 1 && isDragging) {
+                // Pan
+                e.preventDefault(); // Prevent scroll
+                pointX = e.touches[0].clientX - startX;
+                pointY = e.touches[0].clientY - startY;
+                updateTransform();
+            } else if (e.touches.length === 2) {
+                // Pinch Zoom
+                e.preventDefault();
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+                if (lastTouchDist > 0) {
+                    const zoomFactor = currentDist / lastTouchDist;
+                    let newScale = scale * zoomFactor;
+
+                    // Limits
+                    newScale = Math.min(Math.max(0.5, newScale), 10);
+
+                    // Zoom towards center of pinch
+                    const rect = mapContainer.getBoundingClientRect();
+                    const centerX = ((t1.clientX + t2.clientX) / 2) - rect.left;
+                    const centerY = ((t1.clientY + t2.clientY) / 2) - rect.top;
+
+                    // Adjust translation
+                    pointX = centerX - (centerX - pointX) * (newScale / scale);
+                    pointY = centerY - (centerY - pointY) * (newScale / scale);
+
+                    scale = newScale;
+                    updateTransform();
+                    lastTouchDist = currentDist;
+                }
+            }
+        }, { passive: false });
+
+        mapContainer.addEventListener('touchend', e => {
+            if (e.touches.length < 2) {
+                lastTouchDist = -1;
+            }
+            if (e.touches.length === 0) {
+                isDragging = false;
+            }
+        });
+
         mapContainer.addEventListener('wheel', e => {
             e.preventDefault();
 
