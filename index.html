@@ -3,9 +3,36 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Interativo do Paraná</title>
-    <link rel="stylesheet" href="styles.css?v=20260120title1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>eParaná - Mapa Político Interativo</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description"
+        content="Mapa interativo do Paraná com dados eleitorais, investimentos e análise estratégica para campanhas políticas.">
+    <meta name="theme-color" content="#22c55e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="eParaná">
+
+    <!-- iOS / Apple Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="eParaná">
+    <link rel="apple-touch-icon" href="/icon-512.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-192.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icon-192.png">
+
+    <!-- Splash Screen for iOS (prevents white flash) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css?v=20260120pwa1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -44,7 +71,7 @@
 
         <header class="site-header">
             <div class="brand-container">
-                <h1>Mapa Interativo do Paraná</h1>
+                <h1>eParaná</h1>
             </div>
 
             <div class="header-tools">
@@ -817,7 +844,31 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260117a"></script>
+    <script src="script.js?v=20260120pwa1"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Register Service Worker for PWA functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('✅ ServiceWorker registered:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('❌ ServiceWorker registration failed:', error);
+                    });
+            });
+        }
+
+        // iOS Install Prompt (for Add to Home Screen)
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('💡 PWA install prompt available');
+        });
+    </script>
 </body>
 
 </html>
