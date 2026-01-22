@@ -104,6 +104,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 2. Setup mapGroup link
         mapGroup = svgElement.querySelector('g') || svgElement;
+        if (mapGroup) {
+            mapGroup.style.transformOrigin = '0 0';
+            mapGroup.style.transformBox = 'fill-box';
+        }
 
         // 3. Load Data
         const jsonResponse = await fetch('cidades_pr.json?v=20260116');
@@ -1541,7 +1545,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function setupZoomPan() {
         const updateTransform = () => {
-            if (mapGroup) mapGroup.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+            if (!mapGroup) return;
+            const cssTransform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+            mapGroup.style.transform = cssTransform;
+            mapGroup.setAttribute('transform', `translate(${pointX} ${pointY}) scale(${scale})`);
         };
 
         const clampScale = (value) => Math.min(Math.max(0.5, value), 10);
@@ -1554,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTransform();
         };
 
-        const gestureTarget = svgElement || mapContainer;
+        const gestureTarget = mapContainer || svgElement;
         let usingPointerEvents = false;
 
         // --- Mouse Events ---
@@ -1810,10 +1817,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (activeCityId && citiesData[activeCityId]) {
                 const city = citiesData[activeCityId];
-                cityContext = `${city.nome} (População: ${city.habitantes}, Partido: ${city.partido})`;
-                mayorContext = city.prefeito;
-            } else {
-                cityContext = "Paraná (Estado Geral)";
+                const textLower = text.toLowerCase();
+                if (city.nome && textLower.includes(city.nome.toLowerCase())) {
+                    cityContext = `${city.nome} (População: ${city.habitantes}, Partido: ${city.partido})`;
+                    mayorContext = city.prefeito;
+                }
             }
 
             // 3. Build Investment Analytics Context

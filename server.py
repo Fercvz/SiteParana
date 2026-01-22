@@ -742,8 +742,9 @@ async def chat_endpoint(request: ChatRequest):
     
     📈 ESTRUTURA RECOMENDADA PARA RESPOSTAS:
     1. **Resposta Direta** - Responda a pergunta com dados concretos
-    2. **Contexto Adicional** - Informações relacionadas que enriquecem a análise
-    3. **Insight Estratégico** - Uma recomendação prática para campanha
+    2. **Plano de Ação** - O que fazer, como executar, canal prioritário e mensagem-chave
+    3. **Contexto Adicional** - Informações relacionadas que enriquecem a análise
+    4. **Insight Estratégico** - Uma recomendação prática para campanha
     
     ═══════════════════════════════════════════════════════════════
     📍 DADOS DO CONTEXTO ATUAL (USE ESTES DADOS NA SUA RESPOSTA!):

@@ -585,6 +585,7 @@ path.municipio {
     stroke-width: 0.5px;
     vector-effect: non-scaling-stroke;
     transition: fill 0.3s ease, stroke-width 0.2s;
+    touch-action: none;
 }
 
 path.municipio:hover {
