@@ -1544,6 +1544,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (mapGroup) mapGroup.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
         };
 
+        const clampScale = (value) => Math.min(Math.max(0.5, value), 10);
+
+        const applyZoom = (newScale, originX, originY) => {
+            const clampedScale = clampScale(newScale);
+            pointX = originX - (originX - pointX) * (clampedScale / scale);
+            pointY = originY - (originY - pointY) * (clampedScale / scale);
+            scale = clampedScale;
+            updateTransform();
+        };
+
         // --- Mouse Events ---
         mapContainer.addEventListener('mousedown', e => {
             isDragging = true;
@@ -1560,69 +1570,127 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTransform();
         });
 
-        // --- Touch Events (Mobile) ---
-        let lastTouchDist = -1;
+        // --- Touch/Pointer Events (Mobile) ---
+        const supportsPointer = 'PointerEvent' in window && navigator.maxTouchPoints > 0;
 
-        mapContainer.addEventListener('touchstart', e => {
-            if (e.touches.length === 1) {
-                // Single touch: Pan
-                isDragging = true;
-                startX = e.touches[0].clientX - pointX;
-                startY = e.touches[0].clientY - pointY;
-            } else if (e.touches.length === 2) {
-                // Multi touch: Zoom (Pinch)
-                isDragging = false;
-                const t1 = e.touches[0];
-                const t2 = e.touches[1];
-                lastTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-            }
-        }, { passive: false });
+        if (supportsPointer) {
+            const pointers = new Map();
+            let lastTouchDist = -1;
 
-        mapContainer.addEventListener('touchmove', e => {
-            if (e.touches.length === 1 && isDragging) {
-                // Pan
-                e.preventDefault(); // Prevent scroll
-                pointX = e.touches[0].clientX - startX;
-                pointY = e.touches[0].clientY - startY;
-                updateTransform();
-            } else if (e.touches.length === 2) {
-                // Pinch Zoom
-                e.preventDefault();
-                const t1 = e.touches[0];
-                const t2 = e.touches[1];
-                const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            const getCenter = (p1, p2) => ({
+                x: (p1.clientX + p2.clientX) / 2,
+                y: (p1.clientY + p2.clientY) / 2
+            });
 
-                if (lastTouchDist > 0) {
-                    const zoomFactor = currentDist / lastTouchDist;
-                    let newScale = scale * zoomFactor;
+            mapContainer.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                mapContainer.setPointerCapture(e.pointerId);
+                pointers.set(e.pointerId, e);
 
-                    // Limits
-                    newScale = Math.min(Math.max(0.5, newScale), 10);
-
-                    // Zoom towards center of pinch
-                    const rect = mapContainer.getBoundingClientRect();
-                    const centerX = ((t1.clientX + t2.clientX) / 2) - rect.left;
-                    const centerY = ((t1.clientY + t2.clientY) / 2) - rect.top;
-
-                    // Adjust translation
-                    pointX = centerX - (centerX - pointX) * (newScale / scale);
-                    pointY = centerY - (centerY - pointY) * (newScale / scale);
-
-                    scale = newScale;
-                    updateTransform();
-                    lastTouchDist = currentDist;
+                if (pointers.size === 1) {
+                    isDragging = true;
+                    startX = e.clientX - pointX;
+                    startY = e.clientY - pointY;
+                } else if (pointers.size === 2) {
+                    isDragging = false;
+                    const [p1, p2] = Array.from(pointers.values());
+                    lastTouchDist = Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY);
                 }
-            }
-        }, { passive: false });
+            }, { passive: false });
 
-        mapContainer.addEventListener('touchend', e => {
-            if (e.touches.length < 2) {
-                lastTouchDist = -1;
-            }
-            if (e.touches.length === 0) {
-                isDragging = false;
-            }
-        });
+            mapContainer.addEventListener('pointermove', (e) => {
+                if (!pointers.has(e.pointerId)) return;
+                pointers.set(e.pointerId, e);
+
+                if (e.pointerType !== 'mouse') {
+                    e.preventDefault();
+                }
+
+                if (pointers.size === 1 && isDragging) {
+                    pointX = e.clientX - startX;
+                    pointY = e.clientY - startY;
+                    updateTransform();
+                } else if (pointers.size === 2) {
+                    const [p1, p2] = Array.from(pointers.values());
+                    const currentDist = Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY);
+
+                    if (lastTouchDist > 0) {
+                        const zoomFactor = currentDist / lastTouchDist;
+                        const rect = mapContainer.getBoundingClientRect();
+                        const center = getCenter(p1, p2);
+                        const centerX = center.x - rect.left;
+                        const centerY = center.y - rect.top;
+                        applyZoom(scale * zoomFactor, centerX, centerY);
+                        lastTouchDist = currentDist;
+                    }
+                }
+            }, { passive: false });
+
+            const endPointer = (e) => {
+                if (pointers.has(e.pointerId)) {
+                    pointers.delete(e.pointerId);
+                    try { mapContainer.releasePointerCapture(e.pointerId); } catch (err) {}
+                }
+
+                if (pointers.size < 2) {
+                    lastTouchDist = -1;
+                }
+
+                if (pointers.size === 0) {
+                    isDragging = false;
+                }
+            };
+
+            mapContainer.addEventListener('pointerup', endPointer, { passive: false });
+            mapContainer.addEventListener('pointercancel', endPointer, { passive: false });
+        } else {
+            let lastTouchDist = -1;
+
+            mapContainer.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    startX = e.touches[0].clientX - pointX;
+                    startY = e.touches[0].clientY - pointY;
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    lastTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                }
+            }, { passive: false });
+
+            mapContainer.addEventListener('touchmove', e => {
+                if (e.touches.length === 1 && isDragging) {
+                    e.preventDefault();
+                    pointX = e.touches[0].clientX - startX;
+                    pointY = e.touches[0].clientY - startY;
+                    updateTransform();
+                } else if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+                    if (lastTouchDist > 0) {
+                        const zoomFactor = currentDist / lastTouchDist;
+                        const rect = mapContainer.getBoundingClientRect();
+                        const centerX = ((t1.clientX + t2.clientX) / 2) - rect.left;
+                        const centerY = ((t1.clientY + t2.clientY) / 2) - rect.top;
+                        applyZoom(scale * zoomFactor, centerX, centerY);
+                        lastTouchDist = currentDist;
+                    }
+                }
+            }, { passive: false });
+
+            mapContainer.addEventListener('touchend', e => {
+                if (e.touches.length < 2) {
+                    lastTouchDist = -1;
+                }
+                if (e.touches.length === 0) {
+                    isDragging = false;
+                }
+            });
+        }
 
         mapContainer.addEventListener('wheel', e => {
             e.preventDefault();
@@ -1630,10 +1698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Direção do scroll
             const delta = Math.sign(e.deltaY) * -1;
             const factor = 1.1; // Suave
-            let newScale = delta > 0 ? scale * factor : scale / factor;
-
-            // Limites de zoom
-            newScale = Math.min(Math.max(0.5, newScale), 10);
+            const newScale = delta > 0 ? scale * factor : scale / factor;
 
             // Posição do mouse relativa ao container
             const rect = mapContainer.getBoundingClientRect();
@@ -1641,11 +1706,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const mouseY = e.clientY - rect.top;
 
             // Cálcula novo translate para manter o ponto sob o mouse fixo
-            pointX = mouseX - (mouseX - pointX) * (newScale / scale);
-            pointY = mouseY - (mouseY - pointY) * (newScale / scale);
-            scale = newScale;
-
-            updateTransform();
+            applyZoom(newScale, mouseX, mouseY);
         });
 
         zoomInBtn.addEventListener('click', () => { scale *= 1.2; updateTransform(); });
