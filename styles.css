@@ -556,6 +556,14 @@ button#reset-filters:hover {
     touch-action: none;
 }
 
+.map-container svg,
+#map-svg-layer,
+#map-svg-layer svg,
+#map-svg-layer g {
+    touch-action: none;
+    -ms-touch-action: none;
+}
+
 /* User requested NO background theme change on visualization */
 /* .map-container.visualizing {
     background-color: #1e1e2e; 

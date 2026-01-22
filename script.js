@@ -1554,6 +1554,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTransform();
         };
 
+        const gestureTarget = svgElement || mapContainer;
+        let usingPointerEvents = false;
+
         // --- Mouse Events ---
         mapContainer.addEventListener('mousedown', e => {
             isDragging = true;
@@ -1571,7 +1574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // --- Touch/Pointer Events (Mobile) ---
-        const supportsPointer = 'PointerEvent' in window && navigator.maxTouchPoints > 0;
+        const supportsPointer = 'PointerEvent' in window;
 
         if (supportsPointer) {
             const pointers = new Map();
@@ -1582,9 +1585,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 y: (p1.clientY + p2.clientY) / 2
             });
 
-            mapContainer.addEventListener('pointerdown', (e) => {
+            gestureTarget.addEventListener('pointerdown', (e) => {
                 if (e.pointerType === 'mouse' && e.button !== 0) return;
-                mapContainer.setPointerCapture(e.pointerId);
+                usingPointerEvents = true;
+                if (gestureTarget.setPointerCapture) {
+                    gestureTarget.setPointerCapture(e.pointerId);
+                }
                 pointers.set(e.pointerId, e);
 
                 if (pointers.size === 1) {
@@ -1598,7 +1604,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }, { passive: false });
 
-            mapContainer.addEventListener('pointermove', (e) => {
+            gestureTarget.addEventListener('pointermove', (e) => {
                 if (!pointers.has(e.pointerId)) return;
                 pointers.set(e.pointerId, e);
 
@@ -1629,7 +1635,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const endPointer = (e) => {
                 if (pointers.has(e.pointerId)) {
                     pointers.delete(e.pointerId);
-                    try { mapContainer.releasePointerCapture(e.pointerId); } catch (err) {}
+                    try {
+                        if (gestureTarget.releasePointerCapture) {
+                            gestureTarget.releasePointerCapture(e.pointerId);
+                        }
+                    } catch (err) {}
                 }
 
                 if (pointers.size < 2) {
@@ -1641,56 +1651,59 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
 
-            mapContainer.addEventListener('pointerup', endPointer, { passive: false });
-            mapContainer.addEventListener('pointercancel', endPointer, { passive: false });
-        } else {
-            let lastTouchDist = -1;
-
-            mapContainer.addEventListener('touchstart', e => {
-                if (e.touches.length === 1) {
-                    isDragging = true;
-                    startX = e.touches[0].clientX - pointX;
-                    startY = e.touches[0].clientY - pointY;
-                } else if (e.touches.length === 2) {
-                    isDragging = false;
-                    const t1 = e.touches[0];
-                    const t2 = e.touches[1];
-                    lastTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-                }
-            }, { passive: false });
-
-            mapContainer.addEventListener('touchmove', e => {
-                if (e.touches.length === 1 && isDragging) {
-                    e.preventDefault();
-                    pointX = e.touches[0].clientX - startX;
-                    pointY = e.touches[0].clientY - startY;
-                    updateTransform();
-                } else if (e.touches.length === 2) {
-                    e.preventDefault();
-                    const t1 = e.touches[0];
-                    const t2 = e.touches[1];
-                    const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-
-                    if (lastTouchDist > 0) {
-                        const zoomFactor = currentDist / lastTouchDist;
-                        const rect = mapContainer.getBoundingClientRect();
-                        const centerX = ((t1.clientX + t2.clientX) / 2) - rect.left;
-                        const centerY = ((t1.clientY + t2.clientY) / 2) - rect.top;
-                        applyZoom(scale * zoomFactor, centerX, centerY);
-                        lastTouchDist = currentDist;
-                    }
-                }
-            }, { passive: false });
-
-            mapContainer.addEventListener('touchend', e => {
-                if (e.touches.length < 2) {
-                    lastTouchDist = -1;
-                }
-                if (e.touches.length === 0) {
-                    isDragging = false;
-                }
-            });
+            gestureTarget.addEventListener('pointerup', endPointer, { passive: false });
+            gestureTarget.addEventListener('pointercancel', endPointer, { passive: false });
         }
+
+        let lastTouchDist = -1;
+
+        gestureTarget.addEventListener('touchstart', e => {
+            if (usingPointerEvents) return;
+            if (e.touches.length === 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX - pointX;
+                startY = e.touches[0].clientY - pointY;
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                lastTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            }
+        }, { passive: false });
+
+        gestureTarget.addEventListener('touchmove', e => {
+            if (usingPointerEvents) return;
+            if (e.touches.length === 1 && isDragging) {
+                e.preventDefault();
+                pointX = e.touches[0].clientX - startX;
+                pointY = e.touches[0].clientY - startY;
+                updateTransform();
+            } else if (e.touches.length === 2) {
+                e.preventDefault();
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+                if (lastTouchDist > 0) {
+                    const zoomFactor = currentDist / lastTouchDist;
+                    const rect = mapContainer.getBoundingClientRect();
+                    const centerX = ((t1.clientX + t2.clientX) / 2) - rect.left;
+                    const centerY = ((t1.clientY + t2.clientY) / 2) - rect.top;
+                    applyZoom(scale * zoomFactor, centerX, centerY);
+                    lastTouchDist = currentDist;
+                }
+            }
+        }, { passive: false });
+
+        gestureTarget.addEventListener('touchend', e => {
+            if (usingPointerEvents) return;
+            if (e.touches.length < 2) {
+                lastTouchDist = -1;
+            }
+            if (e.touches.length === 0) {
+                isDragging = false;
+            }
+        });
 
         mapContainer.addEventListener('wheel', e => {
             e.preventDefault();
