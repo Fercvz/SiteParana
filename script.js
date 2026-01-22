@@ -1603,15 +1603,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }, { passive: false });
 
+        // Force touch-action none via JS to overlap any CSS issues
+        if (mapContainer) mapContainer.style.touchAction = 'none';
+
         gestureTarget.addEventListener('touchmove', e => {
+            // Always prevent default on map area to stop page scrolling/pull-to-refresh
+            if (e.cancelable) e.preventDefault();
 
             if (e.touches.length === 1 && isDragging) {
-                e.preventDefault();
                 pointX = e.touches[0].clientX - startX;
                 pointY = e.touches[0].clientY - startY;
                 updateTransform();
             } else if (e.touches.length === 2) {
-                e.preventDefault();
                 const t1 = e.touches[0];
                 const t2 = e.touches[1];
                 const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
